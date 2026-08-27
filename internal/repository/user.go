@@ -12,7 +12,6 @@ type IUserRepository interface {
 	CreateUser(ctx context.Context, User entity.User) error
 	GetUser(ctx context.Context, pagination model.Pagination) ([]entity.User, error)
 	DeleteUser(ctx context.Context, id uuid.UUID) error
-	EditUser(ctx context.Context, id uuid.UUID, edit model.EditUser) error
 }
 
 type UserRepository struct {
@@ -52,22 +51,6 @@ func (p *UserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if rows == 0 {
-		return gorm.ErrRecordNotFound
-	}
-
-	return nil
-}
-
-func (p *UserRepository) EditUser(ctx context.Context, id uuid.UUID, edit model.EditUser) error {
-	result := p.db.WithContext(ctx).Model(&entity.User{}).
-		Where("id = ?", id).
-		Updates(edit.ToMap())
-
-	if result.Error != nil {
-		return result.Error
-	}
-
-	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
 
