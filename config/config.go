@@ -10,6 +10,6 @@ func NewConfig() {
 	err := godotenv.Load(".env")
 
 	if err != nil {
-		log.Fatal("Tidak Valid .env File")
+		log.Fatal("Invalid .env File")
 	}
 }
