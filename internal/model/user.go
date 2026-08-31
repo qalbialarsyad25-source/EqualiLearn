@@ -7,45 +7,41 @@ import (
 )
 
 type UserRegister struct {
-	Name            string `json:"name" validate:"required"`
+	Nama            string `json:"nama" validate:"required"`
+	UserName        string `json:"username" validate:"required,min=3"`
 	Email           string `json:"email" validate:"required,email"`
 	Password        string `json:"password" validate:"required,min=8"`
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
 }
 
 type UserResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Name     string    `json:"name"`
-	Email    string    `json:"email"`
+	Id       uuid.UUID `json:"id"`
+	Nama     string    `json:"nama" validate:"required"`
+	UserName string    `json:"username" validate:"required,min=3"`
+	Email    string    `json:"email" validate:"required,email"`
+	Profil   string    `json:"profil"`
 }
 
 type UserLogin struct {
-	Email    string `json:"email" validate:"required,email"`
+	Email    string `json:"email" validate:"required"`
 	Password string `json:"password" validate:"required"`
 }
 
 type ForgotPasswordRequest struct {
-	Email string `json:"email" validate:"required,email"`
+	Email string `json:"email"`
 }
 
 type ResetPasswordRequest struct {
-	Token    string `json:"token" validate:"required"`
-	Password string `json:"password" validate:"required,min=8"`
+	Token    string `json:"token"`
+	Password string `json:"password"`
 }
 
-type GoogleUser struct {
-	ID            string `json:"id"`
-	Email         string `json:"email"`
-	VerifiedEmail bool   `json:"verified_email"`
-	Name          string `json:"name"`
-	Picture       string `json:"picture"`
-}
-
-func ToUserResponse(user entity.User) UserResponse {
+func ToUserResponse(User entity.User) UserResponse {
 	return UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Role:  user.Role,
+		Id:       User.Id,
+		Nama:     User.Nama,
+		UserName: User.UserName,
+		Email:    User.Email,
 	}
 }
+
