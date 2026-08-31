@@ -26,7 +26,7 @@ func (r *V1) Register(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	err = r.usecase.AuthUsecase.Register(ctx, registerRequest)
+	err = r.service.AuthService.Register(ctx, registerRequest)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -52,7 +52,7 @@ func (r *V1) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	err := r.usecase.AuthUsecase.RequestResetPassword(c.Request.Context(), req.Email)
+	err := r.service.AuthService.RequestResetPassword(c.Request.Context(), req.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
@@ -82,7 +82,7 @@ func (r *V1) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	err := r.usecase.AuthUsecase.ResetPassword(c.Request.Context(), req.Token, req.Password)
+	err := r.service.AuthService.ResetPassword(c.Request.Context(), req.Token, req.Password)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Gagal reset password",
@@ -111,7 +111,7 @@ func (r *V1) Login(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	token, err := r.usecase.AuthUsecase.Login(ctx, loginRequest)
+	token, err := r.service.AuthService.Login(ctx, loginRequest)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
 		return
@@ -133,7 +133,7 @@ func (p *V1) LoginGoogle(c *gin.Context) {
 		true,
 	)
 
-	url := p.usecase.AuthUsecase.GoogleLogin(state)
+	url := p.service.AuthService.GoogleLogin(state)
 	c.Redirect(http.StatusFound, url)
 }
 
@@ -148,7 +148,7 @@ func (p *V1) CallbackGoogle(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	token, err := p.usecase.AuthUsecase.GoogleCallback(ctx, code)
+	token, err := p.service.AuthService.GoogleCallback(ctx, code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

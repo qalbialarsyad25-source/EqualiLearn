@@ -1,7 +1,6 @@
 package rest
 
 import (
-	websocket "EquiliLearn/internal/controller/delivery"
 	"EquiliLearn/internal/service"
 	"EquiliLearn/pkg/middleware"
 
@@ -11,15 +10,13 @@ import (
 type V1 struct {
 	middleware.IMiddleware
 	validator *validator.Validate
-	usecase   *service.Usecase
-	wsManager *websocket.WSManager
+	service   *service.Service
 }
 
-func NewV1(middleware middleware.IMiddleware, validator *validator.Validate, usecase *service.Usecase, wsManager *websocket.WSManager) *V1 {
+func NewV1(middleware middleware.IMiddleware, validator *validator.Validate, service *service.Service) *V1 {
 	return &V1{
 		IMiddleware: middleware,
 		validator:   validator,
-		usecase:     usecase,
-		wsManager:   wsManager,
+		service:     service,
 	}
 }

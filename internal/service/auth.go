@@ -18,7 +18,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type IAuthUsecase interface {
+type IAuthService interface {
 	Register(ctx context.Context, param model.UserRegister) error
 	Login(ctx context.Context, param model.UserLogin) (string, error)
 	GoogleLogin(state string) string
@@ -27,15 +27,15 @@ type IAuthUsecase interface {
 	ResetPassword(ctx context.Context, token string, newPassword string) error
 }
 
-type AuthUsecase struct {
+type AuthService struct {
 	Jwt            *jwt.JWT
 	Bcrypt         bcrypt.IBcrypt
 	Config         *oauth2.Config
 	UserRepository repository.IUserRepository
 }
 
-func NewAuthUsecase(jwt *jwt.JWT, bcrypt bcrypt.IBcrypt, oAuth2 *oauth2.Config, userRepository repository.IUserRepository) *AuthUsecase {
-	return &AuthUsecase{
+func NewAuthService(jwt *jwt.JWT, bcrypt bcrypt.IBcrypt, oAuth2 *oauth2.Config, userRepository repository.IUserRepository) *AuthService {
+	return &AuthService{
 		Jwt:            jwt,
 		Bcrypt:         bcrypt,
 		Config:         oAuth2,
@@ -43,22 +43,22 @@ func NewAuthUsecase(jwt *jwt.JWT, bcrypt bcrypt.IBcrypt, oAuth2 *oauth2.Config, 
 	}
 }
 
-func (u *AuthUsecase) Register(ctx context.Context, a model.UserRegister) error {
+func (u *AuthService) Register(ctx context.Context, a model.UserRegister) error {
 
 	a.Email = strings.ToLower(strings.TrimSpace(a.Email))
 
 	if !strings.HasSuffix(a.Email, "@gmail.com") {
-		return errors.New("Please use a valid @gmail.com email address.")
+		return errors.New("email harus menggunakan @gmail.com")
 	}
 	existingUser, _ := u.UserRepository.GetUserByEmail(ctx, a.Email)
 	if existingUser != nil {
-		return errors.New("Email is already in use")
+		return errors.New("email sudah digunakan")
 	}
 
 	a.Email = strings.ToLower(a.Email)
 
 	if a.Password != a.ConfirmPassword {
-		return errors.New("Invalid Password")
+		return errors.New("Password tidak sama")
 	}
 
 	hashedPassword, err := u.Bcrypt.GenerateHash(a.Password)
@@ -67,12 +67,10 @@ func (u *AuthUsecase) Register(ctx context.Context, a model.UserRegister) error 
 	}
 
 	user := entity.User{
-		Id:       uuid.New(),
-		Nama:     a.Nama,
-		UserName: a.UserName,
+		ID:       uuid.New(),
+		Name:     a.Name,
 		Email:    a.Email,
 		Password: hashedPassword,
-		Role:     model.UserRoleUser,
 	}
 
 	err = u.UserRepository.CreateUser(ctx, user)
@@ -82,14 +80,14 @@ func (u *AuthUsecase) Register(ctx context.Context, a model.UserRegister) error 
 	return nil
 }
 
-func (u *AuthUsecase) Login(ctx context.Context, a model.UserLogin) (string, error) {
+func (u *AuthService) Login(ctx context.Context, a model.UserLogin) (string, error) {
 	user, err := u.UserRepository.GetUserByEmail(ctx, a.Email)
 	if err != nil {
 		return "", err
 	}
 
 	if user == nil {
-		return "", errors.New("Email or password is wrong")
+		return "", errors.New("email atau password salah")
 	}
 
 	err = u.Bcrypt.ValidatePassword(user.Password, a.Password)
@@ -97,7 +95,7 @@ func (u *AuthUsecase) Login(ctx context.Context, a model.UserLogin) (string, err
 		return "", err
 	}
 
-	token, err := u.Jwt.GenerateJWT(user.Id.String(), user.Role)
+	token, err := u.Jwt.GenerateJWT(user.ID.String(), "user")
 	if err != nil {
 		return "", err
 	}
@@ -105,20 +103,20 @@ func (u *AuthUsecase) Login(ctx context.Context, a model.UserLogin) (string, err
 	return token, nil
 }
 
-func (u *AuthUsecase) GoogleLogin(state string) string {
+func (u *AuthService) GoogleLogin(state string) string {
 	return u.Config.AuthCodeURL(state)
 }
 
-func (u *AuthUsecase) GoogleCallback(ctx context.Context, code string) (string, error) {
+func (u *AuthService) GoogleCallback(ctx context.Context, code string) (string, error) {
 	token, err := u.Config.Exchange(ctx, code)
 	if err != nil {
-		return "", errors.New("Error" + err.Error())
+		return "", errors.New("gagal" + err.Error())
 	}
 
 	client := u.Config.Client(ctx, token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		return "", errors.New("Error" + err.Error())
+		return "", errors.New("Gagal" + err.Error())
 	}
 
 	defer resp.Body.Close()
@@ -126,7 +124,7 @@ func (u *AuthUsecase) GoogleCallback(ctx context.Context, code string) (string, 
 	var googleUser model.GoogleUser
 	err = json.NewDecoder(resp.Body).Decode(&googleUser)
 	if err != nil {
-		return "", errors.New("Error" + err.Error())
+		return "", errors.New("Gagal" + err.Error())
 	}
 
 	user, err := u.UserRepository.GetUserByEmail(ctx, googleUser.Email)
@@ -136,10 +134,10 @@ func (u *AuthUsecase) GoogleCallback(ctx context.Context, code string) (string, 
 
 	if err == nil {
 		user = &entity.User{
-			Id:       uuid.New(),
+			ID:       uuid.New(),
+			Name:     googleUser.Name,
 			Email:    googleUser.Email,
 			Password: "",
-			Role:     model.UserRoleUser,
 		}
 
 		err = u.UserRepository.CreateUser(ctx, *user)
@@ -148,7 +146,7 @@ func (u *AuthUsecase) GoogleCallback(ctx context.Context, code string) (string, 
 		}
 	}
 
-	jwtToken, err := u.Jwt.GenerateJWT(user.Id.String(), user.Role)
+	jwtToken, err := u.Jwt.GenerateJWT(user.ID.String(), user.Role)
 	if err != nil {
 		return "", err
 	}
@@ -156,7 +154,7 @@ func (u *AuthUsecase) GoogleCallback(ctx context.Context, code string) (string, 
 	return jwtToken, nil
 }
 
-func (u *AuthUsecase) RequestResetPassword(ctx context.Context, userEmail string) error {
+func (u *AuthService) RequestResetPassword(ctx context.Context, userEmail string) error {
 	userEmail = strings.ToLower(userEmail)
 
 	user, err := u.UserRepository.GetUserByEmail(ctx, userEmail)
@@ -171,7 +169,7 @@ func (u *AuthUsecase) RequestResetPassword(ctx context.Context, userEmail string
 	resetToken := uuid.New().String()
 	expired := time.Now().Add(15 * time.Minute)
 
-	err = u.UserRepository.SaveResetToken(ctx, user.Id, resetToken, expired)
+	err = u.UserRepository.SaveResetToken(ctx, user.ID, resetToken, expired)
 	if err != nil {
 		return err
 	}
@@ -185,7 +183,7 @@ func (u *AuthUsecase) RequestResetPassword(ctx context.Context, userEmail string
 	err = email.SendEmail(
 		user.Email,
 		"Reset Password",
-		"Link to reset your password :\n"+resetLink,
+		"Klik link berikut untuk reset password:\n"+resetLink,
 	)
 
 	if err != nil {
@@ -195,13 +193,13 @@ func (u *AuthUsecase) RequestResetPassword(ctx context.Context, userEmail string
 	return nil
 }
 
-func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPassword string) error {
+func (u *AuthService) ResetPassword(ctx context.Context, token string, newPassword string) error {
 	if newPassword == "" {
-		return errors.New("Password cannot be empty")
+		return errors.New("password tidak boleh kosong")
 	}
 
 	if len(newPassword) < 8 {
-		return errors.New("Password must be at least 8 characters long")
+		return errors.New("password minimal 8 karakter")
 	}
 
 	user, err := u.UserRepository.GetUserByResetToken(ctx, token)
@@ -214,12 +212,12 @@ func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPasswo
 		return err
 	}
 
-	err = u.UserRepository.UpdatePassword(ctx, user.Id, hashedPassword)
+	err = u.UserRepository.UpdatePassword(ctx, user.ID, hashedPassword)
 	if err != nil {
 		return err
 	}
 
-	err = u.UserRepository.ClearResetToken(ctx, user.Id)
+	err = u.UserRepository.ClearResetToken(ctx, user.ID)
 	if err != nil {
 		return err
 	}
