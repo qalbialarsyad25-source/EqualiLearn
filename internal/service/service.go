@@ -1,10 +1,9 @@
 package service
 
 import (
-	websocket "EquilLearn/internal/controller/delivery"
-	"EquilLearn/internal/repository"
-	"EquilLearn/pkg/bcrypt"
-	"EquilLearn/pkg/jwt"
+	"EquiliLearn/internal/repository"
+	"EquiliLearn/pkg/bcrypt"
+	"EquiliLearn/pkg/jwt"
 
 	"golang.org/x/oauth2"
 )

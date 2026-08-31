@@ -7,17 +7,15 @@ import (
 )
 
 type UserRegister struct {
-	Nama            string `json:"nama" validate:"required"`
-	UserName        string `json:"username" validate:"required,min=3"`
+	Name            string `json:"name" validate:"required"`
 	Email           string `json:"email" validate:"required,email"`
 	Password        string `json:"password" validate:"required,min=8"`
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
 }
 
 type UserResponse struct {
-	Id       uuid.UUID `json:"id"`
-	Nama     string    `json:"nama" validate:"required"`
-	UserName string    `json:"username" validate:"required,min=3"`
+	ID      uuid.UUID `json:"id"`
+	Name     string    `json:"name" validate:"required"`
 	Email    string    `json:"email" validate:"required,email"`
 	Profil   string    `json:"profil"`
 }
@@ -38,9 +36,8 @@ type ResetPasswordRequest struct {
 
 func ToUserResponse(User entity.User) UserResponse {
 	return UserResponse{
-		Id:       User.Id,
-		Nama:     User.Nama,
-		UserName: User.UserName,
+		ID:       User.ID,
+		Name:     User.Name,
 		Email:    User.Email,
 	}
 }

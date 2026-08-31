@@ -1,11 +1,10 @@
 package rest
 
 import (
+	"EquiliLearn/internal/model"
+	"EquiliLearn/pkg/Oauth"
 	"net/http"
 	"os"
-
-	"EquiliLearn/internal/model"
-	oauth "EquiliLearn/pkg/Oauth"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,7 +28,7 @@ func (r *V1) Register(c *gin.Context) {
 
 	err = r.usecase.AuthUsecase.Register(ctx, registerRequest)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -86,7 +85,7 @@ func (r *V1) ResetPassword(c *gin.Context) {
 	err := r.usecase.AuthUsecase.ResetPassword(c.Request.Context(), req.Token, req.Password)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Gagal reset password: " + err.Error(),
+			"error": "Gagal reset password",
 		})
 		return
 	}
@@ -114,14 +113,14 @@ func (r *V1) Login(c *gin.Context) {
 	ctx := c.Request.Context()
 	token, err := r.usecase.AuthUsecase.Login(ctx, loginRequest)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid email or password"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
-func (r *V1) LoginGoogle(c *gin.Context) {
+func (p *V1) LoginGoogle(c *gin.Context) {
 	state := oauth.GenerateRandomState()
 
 	c.SetCookie(
@@ -134,11 +133,11 @@ func (r *V1) LoginGoogle(c *gin.Context) {
 		true,
 	)
 
-	url := r.usecase.AuthUsecase.GoogleLogin(state)
+	url := p.usecase.AuthUsecase.GoogleLogin(state)
 	c.Redirect(http.StatusFound, url)
 }
 
-func (r *V1) CallbackGoogle(c *gin.Context) {
+func (p *V1) CallbackGoogle(c *gin.Context) {
 	state := c.Query("state")
 	code := c.Query("code")
 
@@ -149,7 +148,7 @@ func (r *V1) CallbackGoogle(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	token, err := r.usecase.AuthUsecase.GoogleCallback(ctx, code)
+	token, err := p.usecase.AuthUsecase.GoogleCallback(ctx, code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

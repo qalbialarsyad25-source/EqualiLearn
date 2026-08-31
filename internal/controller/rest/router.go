@@ -1,12 +1,10 @@
 package rest
 
 import (
-	websocket "EquiliLearn/internal/controller/delivery"
-
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(app *gin.Engine, v1 *V1, wsManager *websocket.WSManager) {
+func NewRouter(app *gin.Engine, v1 *V1) {
 	api := app.Group("/api/v1")
 	{
 		auth := api.Group("/auth")
