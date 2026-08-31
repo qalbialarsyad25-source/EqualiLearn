@@ -1,18 +1,19 @@
-package usecase
+package service
 
 import (
-	"EquilLearn/internal/entity"
-	"EquilLearn/internal/model"
-	"EquilLearn/internal/repository"
-	"EquilLearn/pkg/bcrypt"
-	"EquilLearn/pkg/email"
-	"EquilLearn/pkg/jwt"
 	"context"
 	"encoding/json"
 	"errors"
 	"os"
 	"strings"
 	"time"
+
+	"EquiliLearn/internal/entity"
+	"EquiliLearn/internal/model"
+	"EquiliLearn/internal/repository"
+	"EquiliLearn/pkg/bcrypt"
+	"EquiliLearn/pkg/email"
+	"EquiliLearn/pkg/jwt"
 
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -44,21 +45,19 @@ func NewAuthUsecase(jwt *jwt.JWT, bcrypt bcrypt.IBcrypt, oAuth2 *oauth2.Config, 
 }
 
 func (u *AuthUsecase) Register(ctx context.Context, a model.UserRegister) error {
-
 	a.Email = strings.ToLower(strings.TrimSpace(a.Email))
 
 	if !strings.HasSuffix(a.Email, "@gmail.com") {
-		return errors.New("Email must be in the form of @gmail.com")
+		return errors.New("email must be in the form of @gmail.com")
 	}
+
 	existingUser, _ := u.UserRepository.GetUserByEmail(ctx, a.Email)
 	if existingUser != nil {
 		return errors.New("email is already in use")
 	}
 
-	a.Email = strings.ToLower(a.Email)
-
 	if a.Password != a.ConfirmPassword {
-		return errors.New("Password does not match")
+		return errors.New("passwords do not match")
 	}
 
 	hashedPassword, err := u.Bcrypt.GenerateHash(a.Password)
@@ -67,10 +66,11 @@ func (u *AuthUsecase) Register(ctx context.Context, a model.UserRegister) error 
 	}
 
 	user := entity.User{
-		Id:       uuid.New(),
+		ID:       uuid.New(),
 		Name:     a.Name,
 		Email:    a.Email,
 		Password: hashedPassword,
+		Role:     model.UserRoleUser,
 	}
 
 	err = u.UserRepository.CreateUser(ctx, user)
@@ -81,6 +81,7 @@ func (u *AuthUsecase) Register(ctx context.Context, a model.UserRegister) error 
 }
 
 func (u *AuthUsecase) Login(ctx context.Context, a model.UserLogin) (string, error) {
+	a.Email = strings.ToLower(strings.TrimSpace(a.Email))
 	user, err := u.UserRepository.GetUserByEmail(ctx, a.Email)
 	if err != nil {
 		return "", err
@@ -92,10 +93,10 @@ func (u *AuthUsecase) Login(ctx context.Context, a model.UserLogin) (string, err
 
 	err = u.Bcrypt.ValidatePassword(user.Password, a.Password)
 	if err != nil {
-		return "", err
+		return "", errors.New("email or password salah")
 	}
 
-	token, err := u.Jwt.GenerateJWT(user.Id.String(), user.Role)
+	token, err := u.Jwt.GenerateJWT(user.ID.String(), user.Role)
 	if err != nil {
 		return "", err
 	}
@@ -110,43 +111,44 @@ func (u *AuthUsecase) GoogleLogin(state string) string {
 func (u *AuthUsecase) GoogleCallback(ctx context.Context, code string) (string, error) {
 	token, err := u.Config.Exchange(ctx, code)
 	if err != nil {
-		return "", errors.New("Error" + err.Error())
+		return "", errors.New("oauth error: " + err.Error())
 	}
 
 	client := u.Config.Client(ctx, token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		return "", errors.New("Error" + err.Error())
+		return "", errors.New("oauth userinfo error: " + err.Error())
 	}
-
 	defer resp.Body.Close()
 
 	var googleUser model.GoogleUser
 	err = json.NewDecoder(resp.Body).Decode(&googleUser)
 	if err != nil {
-		return "", errors.New("Error" + err.Error())
+		return "", errors.New("failed to parse google user: " + err.Error())
 	}
 
 	user, err := u.UserRepository.GetUserByEmail(ctx, googleUser.Email)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
-	if err == nil {
-		user = &entity.User{
-			Id:       uuid.New(),
+	if user == nil {
+		newUser := entity.User{
+			ID:       uuid.New(),
 			Email:    googleUser.Email,
+			Name:     googleUser.Name,
 			Password: "",
 			Role:     model.UserRoleUser,
 		}
 
-		err = u.UserRepository.CreateUser(ctx, *user)
+		err = u.UserRepository.CreateUser(ctx, newUser)
 		if err != nil {
 			return "", err
 		}
+		user = &newUser
 	}
 
-	jwtToken, err := u.Jwt.GenerateJWT(user.Id.String(), user.Role)
+	jwtToken, err := u.Jwt.GenerateJWT(user.ID.String(), user.Role)
 	if err != nil {
 		return "", err
 	}
@@ -155,7 +157,7 @@ func (u *AuthUsecase) GoogleCallback(ctx context.Context, code string) (string, 
 }
 
 func (u *AuthUsecase) RequestResetPassword(ctx context.Context, userEmail string) error {
-	userEmail = strings.ToLower(userEmail)
+	userEmail = strings.ToLower(strings.TrimSpace(userEmail))
 
 	user, err := u.UserRepository.GetUserByEmail(ctx, userEmail)
 	if err != nil {
@@ -169,7 +171,7 @@ func (u *AuthUsecase) RequestResetPassword(ctx context.Context, userEmail string
 	resetToken := uuid.New().String()
 	expired := time.Now().Add(15 * time.Minute)
 
-	err = u.UserRepository.SaveResetToken(ctx, user.Id, resetToken, expired)
+	err = u.UserRepository.SaveResetToken(ctx, user.ID, resetToken, expired)
 	if err != nil {
 		return err
 	}
@@ -183,9 +185,8 @@ func (u *AuthUsecase) RequestResetPassword(ctx context.Context, userEmail string
 	err = email.SendEmail(
 		user.Email,
 		"Reset Password",
-		"Link to reset your password :\n"+resetLink,
+		"Link to reset your password:\n"+resetLink,
 	)
-
 	if err != nil {
 		return err
 	}
@@ -199,12 +200,15 @@ func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPasswo
 	}
 
 	if len(newPassword) < 8 {
-		return errors.New("Password must be at least 8 characters long")
+		return errors.New("password must be at least 8 characters long")
 	}
 
 	user, err := u.UserRepository.GetUserByResetToken(ctx, token)
 	if err != nil {
 		return err
+	}
+	if user == nil {
+		return errors.New("invalid or expired reset token")
 	}
 
 	hashedPassword, err := u.Bcrypt.GenerateHash(newPassword)
@@ -212,12 +216,12 @@ func (u *AuthUsecase) ResetPassword(ctx context.Context, token string, newPasswo
 		return err
 	}
 
-	err = u.UserRepository.UpdatePassword(ctx, user.Id, hashedPassword)
+	err = u.UserRepository.UpdatePassword(ctx, user.ID, hashedPassword)
 	if err != nil {
 		return err
 	}
 
-	err = u.UserRepository.ClearResetToken(ctx, user.Id)
+	err = u.UserRepository.ClearResetToken(ctx, user.ID)
 	if err != nil {
 		return err
 	}
