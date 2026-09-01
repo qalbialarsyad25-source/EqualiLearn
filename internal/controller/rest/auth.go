@@ -61,7 +61,7 @@ func (r *V1) ForgotPassword(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Jika email terdaftar, link reset akan dikirimkan",
+		"message": "If email is registered, a reset link will be sent",
 	})
 }
 
@@ -85,13 +85,13 @@ func (r *V1) ResetPassword(c *gin.Context) {
 	err := r.service.AuthService.ResetPassword(c.Request.Context(), req.Token, req.Password)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Gagal reset password",
+			"error": "Failed to reset password",
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "password berhasil diubah",
+		"message": "password changed successfully",
 	})
 }
 

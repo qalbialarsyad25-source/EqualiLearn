@@ -48,17 +48,17 @@ func (u *AuthService) Register(ctx context.Context, a model.UserRegister) error 
 	a.Email = strings.ToLower(strings.TrimSpace(a.Email))
 
 	if !strings.HasSuffix(a.Email, "@gmail.com") {
-		return errors.New("email harus menggunakan @gmail.com")
+		return errors.New("must use @gmail.com")
 	}
 	existingUser, _ := u.UserRepository.GetUserByEmail(ctx, a.Email)
 	if existingUser != nil {
-		return errors.New("email sudah digunakan")
+		return errors.New("email already used")
 	}
 
 	a.Email = strings.ToLower(a.Email)
 
 	if a.Password != a.ConfirmPassword {
-		return errors.New("Password tidak sama")
+		return errors.New("Password do not match")
 	}
 
 	hashedPassword, err := u.Bcrypt.GenerateHash(a.Password)
@@ -87,7 +87,7 @@ func (u *AuthService) Login(ctx context.Context, a model.UserLogin) (string, err
 	}
 
 	if user == nil {
-		return "", errors.New("email atau password salah")
+		return "", errors.New("email or password incorrect")
 	}
 
 	err = u.Bcrypt.ValidatePassword(user.Password, a.Password)
@@ -110,13 +110,13 @@ func (u *AuthService) GoogleLogin(state string) string {
 func (u *AuthService) GoogleCallback(ctx context.Context, code string) (string, error) {
 	token, err := u.Config.Exchange(ctx, code)
 	if err != nil {
-		return "", errors.New("gagal" + err.Error())
+		return "", errors.New("Failed" + err.Error())
 	}
 
 	client := u.Config.Client(ctx, token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		return "", errors.New("Gagal" + err.Error())
+		return "", errors.New("Failed" + err.Error())
 	}
 
 	defer resp.Body.Close()
@@ -124,7 +124,7 @@ func (u *AuthService) GoogleCallback(ctx context.Context, code string) (string, 
 	var googleUser model.GoogleUser
 	err = json.NewDecoder(resp.Body).Decode(&googleUser)
 	if err != nil {
-		return "", errors.New("Gagal" + err.Error())
+		return "", errors.New("Failed" + err.Error())
 	}
 
 	user, err := u.UserRepository.GetUserByEmail(ctx, googleUser.Email)
@@ -183,7 +183,7 @@ func (u *AuthService) RequestResetPassword(ctx context.Context, userEmail string
 	err = email.SendEmail(
 		user.Email,
 		"Reset Password",
-		"Klik link berikut untuk reset password:\n"+resetLink,
+		"Click the link below to reset your password:\n"+resetLink,
 	)
 
 	if err != nil {
@@ -195,11 +195,11 @@ func (u *AuthService) RequestResetPassword(ctx context.Context, userEmail string
 
 func (u *AuthService) ResetPassword(ctx context.Context, token string, newPassword string) error {
 	if newPassword == "" {
-		return errors.New("password tidak boleh kosong")
+		return errors.New("Password cannot be empty")
 	}
 
 	if len(newPassword) < 8 {
-		return errors.New("password minimal 8 karakter")
+		return errors.New("Password must be at least 8 characters")
 	}
 
 	user, err := u.UserRepository.GetUserByResetToken(ctx, token)

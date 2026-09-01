@@ -17,7 +17,6 @@ type UserResponse struct {
 	ID      uuid.UUID `json:"id"`
 	Name     string    `json:"name" validate:"required"`
 	Email    string    `json:"email" validate:"required,email"`
-	Profil   string    `json:"profil"`
 }
 
 type UserLogin struct {
