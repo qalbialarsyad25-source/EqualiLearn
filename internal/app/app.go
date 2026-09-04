@@ -15,6 +15,7 @@ import (
 	"EquiliLearn/pkg/middleware"
 	"EquiliLearn/pkg/postgres"
 	"EquiliLearn/pkg/stt"
+	"EquiliLearn/pkg/tts"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -27,8 +28,9 @@ func Run() {
 	bcryptService := bcrypt.NewBcrypt()
 	oauthConfig := oauth.GoogleOAuthConfig()
 	sttClient := stt.NewSTTClient()
+	ttsClient := tts.NewTTSClient()
 
-	svc := service.NewService(jwtService, bcryptService, oauthConfig, repo, sttClient)
+	svc := service.NewService(jwtService, bcryptService, oauthConfig, repo, sttClient, ttsClient)
 
 	mid := middleware.NewMiddleware(jwtService)
 	val := validator.New()

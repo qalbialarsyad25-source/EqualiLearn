@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EquiliLearn - Real-Time Speech-to-Text</title>
+  <title>EquiliLearn - Speech AI Studio (STT & TTS)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -42,7 +42,7 @@
 
     .container {
       width: 100%;
-      max-width: 860px;
+      max-width: 920px;
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
@@ -82,6 +82,55 @@
       font-size: 1.05rem;
     }
 
+    /* Tabs Navigation */
+    .tabs-nav {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 0.35rem;
+      border-radius: 9999px;
+      border: 1px solid var(--card-border);
+      max-width: 440px;
+      margin: 0 auto;
+    }
+
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.25rem;
+      border-radius: 9999px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 15px -3px var(--primary-glow);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
     .card {
       background: var(--card-bg);
       backdrop-filter: blur(16px);
@@ -117,7 +166,7 @@
       font-weight: 500;
     }
 
-    input, select {
+    input, select, textarea {
       background: rgba(15, 23, 42, 0.6);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 0.75rem;
@@ -129,7 +178,13 @@
       transition: all 0.2s ease;
     }
 
-    input:focus, select:focus {
+    textarea {
+      resize: vertical;
+      min-height: 110px;
+      line-height: 1.6;
+    }
+
+    input:focus, select:focus, textarea:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px var(--primary-glow);
     }
@@ -157,7 +212,7 @@
       gap: 1rem;
     }
 
-    button.mic-btn {
+    button.btn-primary {
       position: relative;
       display: inline-flex;
       align-items: center;
@@ -175,9 +230,15 @@
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    button.mic-btn:hover {
+    button.btn-primary:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 15px 30px -5px var(--primary-glow);
+    }
+
+    button.btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
     }
 
     button.mic-btn.recording {
@@ -257,18 +318,6 @@
       border-radius: 4px;
     }
 
-    .confidence-tag {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      color: #38bdf8;
-      background: rgba(56, 189, 248, 0.1);
-      border: 1px solid rgba(56, 189, 248, 0.2);
-      padding: 0.1rem 0.4rem;
-      border-radius: 4px;
-      margin-left: 0.4rem;
-      vertical-align: middle;
-    }
-
     .actions-row {
       display: flex;
       justify-content: space-between;
@@ -282,78 +331,357 @@
       background: rgba(255, 255, 255, 0.06);
       border: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--text-main);
-      padding: 0.4rem 0.85rem;
+      padding: 0.45rem 0.9rem;
       border-radius: 0.5rem;
       cursor: pointer;
       font-family: inherit;
       font-size: 0.85rem;
+      font-weight: 500;
       transition: all 0.2s;
     }
 
     .btn-secondary:hover {
       background: rgba(255, 255, 255, 0.12);
     }
+
+    /* TTS Preset Chips */
+    .preset-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .chip {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      color: #c7d2fe;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .chip:hover {
+      background: rgba(99, 102, 241, 0.25);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* TTS Audio Player Widget */
+    .tts-player-card {
+      margin-top: 1.5rem;
+      background: rgba(11, 15, 25, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 1rem;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .player-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .voice-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(6, 182, 212, 0.15);
+      color: #67e8f9;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    audio {
+      width: 100%;
+      outline: none;
+      border-radius: 0.5rem;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <div class="brand-badge">⚡ EquiliLearn Real-Time STT</div>
-      <h1>Live Speech-to-Text</h1>
-      <p class="subtitle">Stream live audio from your microphone directly to the Go WebSocket pipeline.</p>
+      <div class="brand-badge">⚡ EquiliLearn Speech AI Engine</div>
+      <h1>Speech AI Studio</h1>
+      <p class="subtitle">Real-time Speech Recognition (STT) & Natural Voice Synthesis (TTS) powered by Deepgram.</p>
     </header>
 
-    <div class="card">
-      <div class="settings-grid">
-        <div class="form-group">
-          <label for="langSelect">Recognition Language</label>
-          <select id="langSelect">
-            <option value="id-ID" selected>Bahasa Indonesia (id-ID)</option>
-            <option value="en-US">English (en-US)</option>
-          </select>
+    <!-- Navigation Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('ttsTab', this)">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+        </svg>
+        Text-to-Speech
+      </button>
+      <button class="tab-btn" onclick="switchTab('sttTab', this)">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+        </svg>
+        Speech-to-Text
+      </button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 1: TEXT-TO-SPEECH (TTS)               -->
+    <!-- ========================================== -->
+    <div id="ttsTab" class="tab-content active">
+      <div class="card">
+        <div class="settings-grid">
+          <div class="form-group">
+            <label for="ttsVoiceSelect">Deepgram Aura Voice Model</label>
+            <select id="ttsVoiceSelect">
+              <option value="aura-asteria-en">Asteria (Female - Warm, Confident, US)</option>
+              <option value="aura-luna-en">Luna (Female - Upbeat, Casual, US)</option>
+              <option value="aura-stella-en">Stella (Female - Articulate, Polished, US)</option>
+              <option value="aura-athena-en">Athena (Female - Sophisticated, British)</option>
+              <option value="aura-hera-en">Hera (Female - Authoritative, Clear, US)</option>
+              <option value="aura-orion-en">Orion (Male - Approachable, Storyteller, US)</option>
+              <option value="aura-arcas-en">Arcas (Male - Calm, Instructional, US)</option>
+              <option value="aura-perseus-en">Perseus (Male - Casual, Youthful, US)</option>
+              <option value="aura-angus-en">Angus (Male - Rich, Irish Accent)</option>
+              <option value="aura-orpheus-en">Orpheus (Male - Deep, Resonant, US)</option>
+              <option value="aura-helios-en">Helios (Male - Cultured, British)</option>
+              <option value="aura-zeus-en">Zeus (Male - Powerful, Commanding, US)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="ttsFormatSelect">Audio Output Format</label>
+            <select id="ttsFormatSelect">
+              <option value="mp3" selected>MP3 (High Quality & Compatibility)</option>
+              <option value="wav">WAV (Linear PCM Audio)</option>
+              <option value="opus">Opus (Ultra Low Latency)</option>
+              <option value="aac">AAC</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group">
-          <label for="tokenInput">JWT Auth Token (Optional)</label>
-          <input type="text" id="tokenInput" placeholder="Paste your Bearer JWT token or leave empty for Guest demo..." />
+          <label for="ttsTextInput">Input Text to Synthesize</label>
+          <textarea id="ttsTextInput" placeholder="Type or paste the text you want EquiliLearn to speak out loud...">Welcome to EquiliLearn! Our platform provides adaptive and inclusive learning experiences for every student.</textarea>
+          
+          <div class="preset-chips">
+            <span style="font-size: 0.78rem; color: var(--text-muted); align-self: center;">Presets:</span>
+            <span class="chip" onclick="setTtsPreset('Welcome to EquiliLearn! Empowering learners everywhere with accessible, AI-powered tools.')">🎓 Welcome Intro</span>
+            <span class="chip" onclick="setTtsPreset('Artificial Intelligence in education adapts to each learner\'s unique pace and style.')">🤖 AI Education</span>
+            <span class="chip" onclick="setTtsPreset('Deepgram Aura produces natural, conversational voice synthesis with ultra-low latency.')">⚡ Fast Voice</span>
+            <span class="chip" onclick="setTtsPreset('Congratulations on completing today\'s interactive lesson! You have earned 50 experience points.')">🏆 Milestone</span>
+          </div>
         </div>
-      </div>
 
-      <div class="visualizer-container">
-        <canvas id="audioVisualizer"></canvas>
-
-        <div class="controls">
-          <button id="micBtn" class="mic-btn" onclick="toggleRecording()">
-            <svg id="micIcon" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        <div class="controls" style="margin-top: 1.5rem;">
+          <button id="synthesizeBtn" class="btn-primary" onclick="synthesizeSpeech()">
+            <svg id="synthIcon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span id="micBtnText">Start Listening</span>
+            <span id="synthBtnText">Synthesize & Play</span>
           </button>
         </div>
 
-        <div class="status-indicator">
-          <div id="statusDot" class="status-dot"></div>
-          <span id="statusText">Ready to connect</span>
+        <!-- TTS Audio Player Card -->
+        <div id="ttsPlayerCard" class="tts-player-card" style="display: none;">
+          <div class="player-header">
+            <span id="ttsVoiceBadge" class="voice-badge">aura-asteria-en</span>
+            <span id="ttsMetaInfo" style="font-size: 0.82rem; color: var(--text-muted);">-</span>
+          </div>
+          <audio id="ttsAudioPlayer" controls autoplay></audio>
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <button class="btn-secondary" onclick="downloadTtsAudio()">⬇️ Download Audio</button>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="transcript-box" id="transcriptBox">
-        <span id="finalTranscript" class="final-text"></span>
-        <span id="interimTranscript" class="interim-text"></span>
-      </div>
+    <!-- ========================================== -->
+    <!-- TAB 2: SPEECH-TO-TEXT (STT)               -->
+    <!-- ========================================== -->
+    <div id="sttTab" class="tab-content">
+      <div class="card">
+        <div class="settings-grid">
+          <div class="form-group">
+            <label for="langSelect">Recognition Language</label>
+            <select id="langSelect">
+              <option value="id-ID" selected>Bahasa Indonesia (id-ID)</option>
+              <option value="en-US">English (en-US)</option>
+            </select>
+          </div>
 
-      <div class="actions-row">
-        <span id="statsInfo">Confidence: - | Chunks Sent: 0</span>
-        <div style="display: flex; gap: 0.5rem;">
-          <button class="btn-secondary" onclick="clearTranscript()">Clear</button>
-          <button class="btn-secondary" onclick="copyTranscript()">Copy Text</button>
+          <div class="form-group">
+            <label for="tokenInput">JWT Auth Token (Optional)</label>
+            <input type="text" id="tokenInput" placeholder="Paste your Bearer JWT token or leave empty for Guest demo..." />
+          </div>
+        </div>
+
+        <div class="visualizer-container">
+          <canvas id="audioVisualizer"></canvas>
+
+          <div class="controls">
+            <button id="micBtn" class="btn-primary mic-btn" onclick="toggleRecording()">
+              <svg id="micIcon" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+              </svg>
+              <span id="micBtnText">Start Listening</span>
+            </button>
+          </div>
+
+          <div class="status-indicator">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="statusText">Ready to connect</span>
+          </div>
+        </div>
+
+        <div class="transcript-box" id="transcriptBox">
+          <span id="finalTranscript" class="final-text"></span>
+          <span id="interimTranscript" class="interim-text"></span>
+        </div>
+
+        <div class="actions-row">
+          <span id="statsInfo">Confidence: - | Chunks Sent: 0</span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn-secondary" onclick="clearTranscript()">Clear</button>
+            <button class="btn-secondary" onclick="copyTranscript()">Copy Text</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <script>
+    // Tab Switching
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+      if (tabId === 'sttTab') {
+        resizeCanvas();
+      }
+    }
+
+    // ==========================================
+    // TTS LOGIC
+    // ==========================================
+    let currentAudioBlobUrl = null;
+    let currentAudioFormat = 'mp3';
+
+    function setTtsPreset(text) {
+      document.getElementById('ttsTextInput').value = text;
+    }
+
+    // Load available voices on startup
+    async function loadVoices() {
+      try {
+        const res = await fetch('/api/v1/speech/voices');
+        if (res.ok) {
+          const body = await res.json();
+          if (body.data && body.data.length > 0) {
+            const select = document.getElementById('ttsVoiceSelect');
+            select.innerHTML = '';
+            body.data.forEach(v => {
+              const opt = document.createElement('option');
+              opt.value = v.id;
+              opt.textContent = `${v.name} (${v.gender} - ${v.language}) - ${v.description}`;
+              select.appendChild(opt);
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch remote voices list:", err);
+      }
+    }
+    loadVoices();
+
+    async function synthesizeSpeech() {
+      const text = document.getElementById('ttsTextInput').value.trim();
+      if (!text) {
+        alert("Please enter some text to synthesize.");
+        return;
+      }
+
+      const voice = document.getElementById('ttsVoiceSelect').value;
+      const format = document.getElementById('ttsFormatSelect').value;
+      currentAudioFormat = format;
+
+      const btn = document.getElementById('synthesizeBtn');
+      const btnText = document.getElementById('synthBtnText');
+      btn.disabled = true;
+      btnText.textContent = "Synthesizing...";
+
+      const startTime = performance.now();
+
+      try {
+        const response = await fetch('/api/v1/speech/synthesize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'audio/*'
+          },
+          body: JSON.stringify({
+            text: text,
+            voice: voice,
+            format: format
+          })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Server returned ${response.status}: ${errText}`);
+        }
+
+        const audioBlob = await response.blob();
+        const duration = Math.round(performance.now() - startTime);
+
+        if (currentAudioBlobUrl) {
+          URL.revokeObjectURL(currentAudioBlobUrl);
+        }
+        currentAudioBlobUrl = URL.createObjectURL(audioBlob);
+
+        const playerCard = document.getElementById('ttsPlayerCard');
+        const audioPlayer = document.getElementById('ttsAudioPlayer');
+        const voiceBadge = document.getElementById('ttsVoiceBadge');
+        const metaInfo = document.getElementById('ttsMetaInfo');
+
+        voiceBadge.textContent = voice;
+        metaInfo.textContent = `Latency: ${duration}ms | Size: ${(audioBlob.size / 1024).toFixed(1)} KB`;
+
+        playerCard.style.display = 'flex';
+        audioPlayer.src = currentAudioBlobUrl;
+        audioPlayer.play();
+
+      } catch (err) {
+        console.error("TTS error:", err);
+        alert("Text-to-Speech Error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = "Synthesize & Play";
+      }
+    }
+
+    function downloadTtsAudio() {
+      if (!currentAudioBlobUrl) return;
+      const a = document.createElement('a');
+      a.href = currentAudioBlobUrl;
+      a.download = `equililearn_tts_${Date.now()}.${currentAudioFormat}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // ==========================================
+    // STT LOGIC
+    // ==========================================
     let isRecording = false;
     let ws = null;
     let audioContext = null;
@@ -373,10 +701,11 @@
     const canvas = document.getElementById('audioVisualizer');
     const canvasCtx = canvas.getContext('2d');
 
-    // Visualizer Canvas Setup
     function resizeCanvas() {
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = 70;
+      if (canvas.parentElement) {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = 70;
+      }
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -509,7 +838,6 @@
       analyserNode.fftSize = 2048;
       source.connect(analyserNode);
 
-      // Audio processor for PCM 16-bit linear mono streaming
       const bufferSize = 4096;
       processorNode = audioContext.createScriptProcessor(bufferSize, 1, 1);
 
@@ -517,7 +845,6 @@
         if (!isRecording || !ws || ws.readyState !== WebSocket.OPEN) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
-        // Convert Float32Array to 16-bit PCM Linear
         const pcm16 = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
           let s = Math.max(-1, Math.min(1, inputData[i]));
