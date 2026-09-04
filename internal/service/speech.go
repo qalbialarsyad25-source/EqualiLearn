@@ -14,8 +14,8 @@ import (
 )
 
 type ISpeechService interface {
-	StartSTTSession(ctx context.Context, userID uuid.UUID, cfg model.STTStreamConfig) (stt.ISTTSession, string, error)
-	SaveFinalTranscription(ctx context.Context, userID uuid.UUID, sessionID string, language string, text string, confidence float64, durationMs int64) (*entity.Transcription, error)
+	StartSTTSession(ctx context.Context, userID *uuid.UUID, cfg model.STTStreamConfig) (stt.ISTTSession, string, error)
+	SaveFinalTranscription(ctx context.Context, userID *uuid.UUID, sessionID string, language string, text string, confidence float64, durationMs int64) (*entity.Transcription, error)
 	GetTranscriptionHistory(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]model.TranscriptionResponse, error)
 	DeleteTranscription(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
@@ -32,7 +32,7 @@ func NewSpeechService(sttClient stt.ISTTClient, transcriptionRepo repository.ITr
 	}
 }
 
-func (s *SpeechService) StartSTTSession(ctx context.Context, userID uuid.UUID, cfg model.STTStreamConfig) (stt.ISTTSession, string, error) {
+func (s *SpeechService) StartSTTSession(ctx context.Context, userID *uuid.UUID, cfg model.STTStreamConfig) (stt.ISTTSession, string, error) {
 	sessionID := uuid.New().String()
 
 	lang := cfg.LanguageCode
@@ -65,7 +65,7 @@ func (s *SpeechService) StartSTTSession(ctx context.Context, userID uuid.UUID, c
 	return session, sessionID, nil
 }
 
-func (s *SpeechService) SaveFinalTranscription(ctx context.Context, userID uuid.UUID, sessionID string, language string, text string, confidence float64, durationMs int64) (*entity.Transcription, error) {
+func (s *SpeechService) SaveFinalTranscription(ctx context.Context, userID *uuid.UUID, sessionID string, language string, text string, confidence float64, durationMs int64) (*entity.Transcription, error) {
 	if text == "" {
 		return nil, nil
 	}

@@ -23,7 +23,7 @@ func (m *mockTranscriptionRepo) CreateTranscription(ctx context.Context, transcr
 func (m *mockTranscriptionRepo) GetTranscriptionsByUserID(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]entity.Transcription, error) {
 	var results []entity.Transcription
 	for _, t := range m.transcriptions {
-		if t.UserID == userID {
+		if t.UserID != nil && *t.UserID == userID {
 			results = append(results, t)
 		}
 	}
@@ -42,7 +42,7 @@ func (m *mockTranscriptionRepo) GetTranscriptionByID(ctx context.Context, id uui
 func (m *mockTranscriptionRepo) DeleteTranscription(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	var filtered []entity.Transcription
 	for _, t := range m.transcriptions {
-		if !(t.ID == id && t.UserID == userID) {
+		if !(t.ID == id && t.UserID != nil && *t.UserID == userID) {
 			filtered = append(filtered, t)
 		}
 	}
@@ -64,7 +64,7 @@ func TestSpeechService_StartSTTSession(t *testing.T) {
 		InterimResults: true,
 	}
 
-	session, sessionID, err := svc.StartSTTSession(ctx, userID, cfg)
+	session, sessionID, err := svc.StartSTTSession(ctx, &userID, cfg)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -89,7 +89,7 @@ func TestSpeechService_SaveAndGetHistory(t *testing.T) {
 	userID := uuid.New()
 	sessionID := uuid.New().String()
 
-	saved, err := svc.SaveFinalTranscription(ctx, userID, sessionID, "id-ID", "Halo dunia", 0.98, 1200)
+	saved, err := svc.SaveFinalTranscription(ctx, &userID, sessionID, "id-ID", "Halo dunia", 0.98, 1200)
 	if err != nil {
 		t.Fatalf("failed to save transcription: %v", err)
 	}

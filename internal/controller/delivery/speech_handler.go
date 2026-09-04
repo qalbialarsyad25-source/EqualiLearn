@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -12,6 +11,8 @@ import (
 	"EquiliLearn/internal/model"
 	"EquiliLearn/internal/service"
 	"EquiliLearn/pkg/jwt"
+
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024 * 64,
 	WriteBufferSize: 1024 * 64,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow CORS origins for flexible cross-domain & local frontend integration
+		return true // Allow CORS origins
 	},
 }
 
@@ -42,7 +43,7 @@ func NewSpeechWSHandler(manager *WSManager, speechService service.ISpeechService
 
 // HandleRealtimeSTT handles WebSocket connection for real-time speech recognition
 func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
-	// 1. Authenticate user from query param `token`, header, or allow guest mode if token is empty
+	// 1. Authenticate user from query param `token` or Authorization header (optional for guest demo)
 	tokenStr := c.Query("token")
 	if tokenStr == "" {
 		authHeader := c.GetHeader("Authorization")
@@ -51,22 +52,18 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 		}
 	}
 
-	var userUUID uuid.UUID
+	var userUUID *uuid.UUID
+	clientTrackingID := uuid.New().String()
+
 	if tokenStr != "" {
 		userIdStr, _, err := h.jwtService.ValidateToken(tokenStr)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
-			return
-		}
-		parsedID, err := uuid.Parse(userIdStr)
 		if err == nil {
-			userUUID = parsedID
+			parsedID, err := uuid.Parse(userIdStr)
+			if err == nil {
+				userUUID = &parsedID
+				clientTrackingID = parsedID.String()
+			}
 		}
-	}
-
-	// Fallback to random anonymous session if not logged in (e.g. public demo)
-	if userUUID == uuid.Nil {
-		userUUID = uuid.New()
 	}
 
 	// 2. Upgrade connection to WebSocket
@@ -76,8 +73,8 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	h.manager.AddClient(userUUID.String(), conn)
-	defer h.manager.RemoveClient(userUUID.String(), conn)
+	h.manager.AddClient(clientTrackingID, conn)
+	defer h.manager.RemoveClient(clientTrackingID, conn)
 
 	// 3. Prepare stream configuration defaults (can be overridden via query params)
 	lang := c.DefaultQuery("lang", "id-ID")
@@ -108,8 +105,8 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 	_ = conn.WriteJSON(model.WSGenericMessage{
 		Type: model.WSMsgTypeReady,
 		Payload: gin.H{
-			"session_id": sessionID,
-			"language":   config.LanguageCode,
+			"session_id":  sessionID,
+			"language":    config.LanguageCode,
 			"sample_rate": config.SampleRate,
 		},
 	})
@@ -223,7 +220,7 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 	_ = safeWriteJSON(model.WSGenericMessage{
 		Type: model.WSMsgTypeFinished,
 		Payload: gin.H{
-			"session_id": sessionID,
+			"session_id":  sessionID,
 			"duration_ms": time.Since(startTime).Milliseconds(),
 		},
 	})

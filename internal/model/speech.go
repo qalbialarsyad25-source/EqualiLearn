@@ -37,12 +37,12 @@ type TranscriptEvent struct {
 }
 
 type TranscriptionResponse struct {
-	ID         uuid.UUID `json:"id"`
-	UserID     uuid.UUID `json:"user_id"`
-	SessionID  string    `json:"session_id"`
-	Language   string    `json:"language"`
-	Text       string    `json:"text"`
-	Confidence float64   `json:"confidence"`
-	DurationMs int64     `json:"duration_ms"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID         uuid.UUID  `json:"id"`
+	UserID     *uuid.UUID `json:"user_id,omitempty"`
+	SessionID  string     `json:"session_id"`
+	Language   string     `json:"language"`
+	Text       string     `json:"text"`
+	Confidence float64    `json:"confidence"`
+	DurationMs int64      `json:"duration_ms"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
