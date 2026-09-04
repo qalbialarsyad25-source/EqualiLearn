@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"EquiliLearn/internal/controller/delivery"
 	"EquiliLearn/internal/controller/rest"
 	"EquiliLearn/internal/repository"
 	"EquiliLearn/internal/service"
@@ -13,6 +14,7 @@ import (
 	"EquiliLearn/pkg/jwt"
 	"EquiliLearn/pkg/middleware"
 	"EquiliLearn/pkg/postgres"
+	"EquiliLearn/pkg/stt"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -24,18 +26,22 @@ func Run() {
 	jwtService := jwt.NewJWT()
 	bcryptService := bcrypt.NewBcrypt()
 	oauthConfig := oauth.GoogleOAuthConfig()
+	sttClient := stt.NewSTTClient()
 
-	service := service.NewService(jwtService, bcryptService, oauthConfig, repo)
+	svc := service.NewService(jwtService, bcryptService, oauthConfig, repo, sttClient)
 
 	mid := middleware.NewMiddleware(jwtService)
 	val := validator.New()
 
-	v1 := rest.NewV1(mid, val, service)
+	v1 := rest.NewV1(mid, val, svc)
+
+	wsManager := delivery.NewWSManager()
+	speechWSHandler := delivery.NewSpeechWSHandler(wsManager, svc.SpeechService, jwtService)
 
 	app := server.Start()
 
-	// Register REST API endpoints
-	rest.NewRouter(app, v1)
+	// Register REST and WebSocket API endpoints
+	rest.NewRouter(app, v1, speechWSHandler)
 
 	port := os.Getenv("APP_PORT")
 	if port == "" {
