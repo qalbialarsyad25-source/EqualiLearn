@@ -7,6 +7,7 @@ import (
 	"EquiliLearn/internal/entity"
 	"EquiliLearn/internal/model"
 	"EquiliLearn/pkg/stt"
+	"EquiliLearn/pkg/tts"
 
 	"github.com/google/uuid"
 )
@@ -51,9 +52,10 @@ func (m *mockTranscriptionRepo) DeleteTranscription(ctx context.Context, id uuid
 }
 
 func TestSpeechService_StartSTTSession(t *testing.T) {
-	mockClient := stt.NewMockSTTClient()
+	mockSTT := stt.NewMockSTTClient()
+	mockTTS := tts.NewMockTTSClient()
 	repo := &mockTranscriptionRepo{}
-	svc := NewSpeechService(mockClient, repo)
+	svc := NewSpeechService(mockSTT, mockTTS, repo)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -81,9 +83,10 @@ func TestSpeechService_StartSTTSession(t *testing.T) {
 }
 
 func TestSpeechService_SaveAndGetHistory(t *testing.T) {
-	mockClient := stt.NewMockSTTClient()
+	mockSTT := stt.NewMockSTTClient()
+	mockTTS := tts.NewMockTTSClient()
 	repo := &mockTranscriptionRepo{}
-	svc := NewSpeechService(mockClient, repo)
+	svc := NewSpeechService(mockSTT, mockTTS, repo)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -116,5 +119,65 @@ func TestSpeechService_SaveAndGetHistory(t *testing.T) {
 	historyAfterDelete, _ := svc.GetTranscriptionHistory(ctx, userID, model.Pagination{Page: 1, Limit: 10})
 	if len(historyAfterDelete) != 0 {
 		t.Fatalf("expected 0 history items after deletion, got %d", len(historyAfterDelete))
+	}
+}
+
+func TestSpeechService_SynthesizeSpeechAndVoices(t *testing.T) {
+	mockSTT := stt.NewMockSTTClient()
+	mockTTS := tts.NewMockTTSClient()
+	repo := &mockTranscriptionRepo{}
+	svc := NewSpeechService(mockSTT, mockTTS, repo)
+
+	ctx := context.Background()
+
+	// 1. Test GetAvailableVoices
+	voices := svc.GetAvailableVoices(ctx)
+	if len(voices) == 0 {
+		t.Fatal("expected at least 1 available voice")
+	}
+
+	foundAsteria := false
+	for _, v := range voices {
+		if v.ID == "aura-asteria-en" {
+			foundAsteria = true
+			break
+		}
+	}
+	if !foundAsteria {
+		t.Errorf("expected 'aura-asteria-en' in voice list")
+	}
+
+	// 2. Test SynthesizeSpeech
+	req := model.SynthesizeSpeechRequest{
+		Text:   "Hello from EquiliLearn text to speech engine.",
+		Voice:  "aura-asteria-en",
+		Format: "wav",
+	}
+
+	output, err := svc.SynthesizeSpeech(ctx, req)
+	if err != nil {
+		t.Fatalf("expected no error synthesizing speech, got %v", err)
+	}
+
+	if output == nil {
+		t.Fatal("expected non-nil output")
+	}
+
+	if len(output.AudioData) == 0 {
+		t.Fatal("expected non-empty audio data")
+	}
+
+	if output.ContentType != "audio/wav" {
+		t.Errorf("expected ContentType 'audio/wav', got %s", output.ContentType)
+	}
+
+	if output.Voice != "aura-asteria-en" {
+		t.Errorf("expected Voice 'aura-asteria-en', got %s", output.Voice)
+	}
+
+	// 3. Test empty text error
+	_, err = svc.SynthesizeSpeech(ctx, model.SynthesizeSpeechRequest{Text: ""})
+	if err == nil {
+		t.Fatal("expected error when synthesizing empty text")
 	}
 }
