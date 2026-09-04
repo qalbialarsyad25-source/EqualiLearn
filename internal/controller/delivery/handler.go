@@ -1,24 +1,17 @@
-package websocket
+package delivery
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 )
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
 
 type WSHandler struct {
 	manager *WSManager
 }
 
 func NewWSHandler(manager *WSManager) *WSHandler {
-	return &WSHandler{manager}
+	return &WSHandler{manager: manager}
 }
 
 func (h *WSHandler) HandleWS(c *gin.Context) {
@@ -32,13 +25,14 @@ func (h *WSHandler) HandleWS(c *gin.Context) {
 	if err != nil {
 		return
 	}
+	defer conn.Close()
 
 	h.manager.AddClient(userID, conn)
+	defer h.manager.RemoveClient(userID, conn)
 
 	for {
 		_, _, err := conn.ReadMessage()
 		if err != nil {
-			h.manager.RemoveClient(userID)
 			break
 		}
 	}
