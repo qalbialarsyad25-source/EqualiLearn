@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -11,8 +12,6 @@ import (
 	"EquiliLearn/internal/model"
 	"EquiliLearn/internal/service"
 	"EquiliLearn/pkg/jwt"
-
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -99,7 +98,6 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 		})
 		return
 	}
-	defer session.Close()
 
 	// Notify client that connection is ready to receive audio
 	_ = conn.WriteJSON(model.WSGenericMessage{
@@ -121,8 +119,21 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 	resultsChan, errorsChan := session.Receive()
 	startTime := time.Now()
 
-	// 5. Goroutine for receiving recognition results and sending to client
+	// Track accumulated full transcript across the entire audio session
+	var (
+		accumulatedFinalTexts []string
+		latestInterimText     string
+		totalConfidence       float64
+		confidenceCount       int
+		textMu                sync.Mutex
+		receiverWg            sync.WaitGroup
+	)
+
+	receiverWg.Add(1)
+
+	// 5. Goroutine for receiving recognition results and pushing live to client
 	go func() {
+		defer receiverWg.Done()
 		for {
 			select {
 			case <-ctx.Done():
@@ -144,10 +155,12 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 					return
 				}
 
-				// Push transcript update to client
+				trimmed := strings.TrimSpace(result.Text)
+
+				// Push live transcript update to client
 				event := model.TranscriptEvent{
 					SessionID:  sessionID,
-					Text:       result.Text,
+					Text:       trimmed,
 					IsFinal:    result.IsFinal,
 					Confidence: result.Confidence,
 					Language:   config.LanguageCode,
@@ -159,27 +172,30 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 					Payload: event,
 				})
 
-				// If the transcript sentence is finalized, persist to database
-				if result.IsFinal && result.Text != "" {
-					durationMs := time.Since(startTime).Milliseconds()
-					_, _ = h.speechService.SaveFinalTranscription(
-						context.Background(),
-						userUUID,
-						sessionID,
-						config.LanguageCode,
-						result.Text,
-						result.Confidence,
-						durationMs,
-					)
+				// Accumulate text in memory during live session (DO NOT write to DB yet)
+				textMu.Lock()
+				if result.IsFinal {
+					if trimmed != "" {
+						accumulatedFinalTexts = append(accumulatedFinalTexts, trimmed)
+						if result.Confidence > 0 {
+							totalConfidence += result.Confidence
+							confidenceCount++
+						}
+					}
+					latestInterimText = ""
+				} else {
+					latestInterimText = trimmed
 				}
+				textMu.Unlock()
 			}
 		}
 	}()
 
-	// 6. Main loop: Read incoming audio chunks or config frames from WebSocket
+	// 6. Main loop: Read incoming audio chunks or config frames from WebSocket until disconnect
 	for {
 		msgType, message, err := conn.ReadMessage()
 		if err != nil {
+			// Client stopped audio stream / disconnected
 			break
 		}
 
@@ -216,12 +232,46 @@ func (h *SpeechWSHandler) HandleRealtimeSTT(c *gin.Context) {
 		}
 	}
 
-	// Session finished
+	// 7. Client disconnected / stopped audio: Close STT session and wait for receiver to finish
+	_ = session.Close()
+	cancel()
+	receiverWg.Wait()
+
+	// 8. Aggregate the full session text and save to DB ONCE after disconnection
+	textMu.Lock()
+	if latestInterimText != "" && len(accumulatedFinalTexts) == 0 {
+		// In case user disconnected before a sentence finalized, preserve what was spoken
+		accumulatedFinalTexts = append(accumulatedFinalTexts, latestInterimText)
+	}
+
+	fullTranscript := strings.TrimSpace(strings.Join(accumulatedFinalTexts, " "))
+	avgConfidence := 0.95
+	if confidenceCount > 0 {
+		avgConfidence = totalConfidence / float64(confidenceCount)
+	}
+	textMu.Unlock()
+
+	durationMs := time.Since(startTime).Milliseconds()
+
+	if fullTranscript != "" {
+		_, _ = h.speechService.SaveFinalTranscription(
+			context.Background(),
+			userUUID,
+			sessionID,
+			config.LanguageCode,
+			fullTranscript,
+			avgConfidence,
+			durationMs,
+		)
+	}
+
+	// Notify finished event if connection is still responsive
 	_ = safeWriteJSON(model.WSGenericMessage{
 		Type: model.WSMsgTypeFinished,
 		Payload: gin.H{
 			"session_id":  sessionID,
-			"duration_ms": time.Since(startTime).Milliseconds(),
+			"duration_ms": durationMs,
+			"text":        fullTranscript,
 		},
 	})
 }
