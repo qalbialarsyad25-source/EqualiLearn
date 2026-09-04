@@ -30,11 +30,17 @@ func NewRouter(app *gin.Engine, v1 *V1, wsHandler *delivery.SpeechWSHandler) {
 			ws.GET("/speech-to-text", wsHandler.HandleRealtimeSTT)
 		}
 
-		// Speech transcription REST endpoints
+		// Speech transcription and Text-to-Speech REST endpoints
 		speech := api.Group("/speech")
 		{
+			// Speech-to-Text history
 			speech.GET("/history", v1.Authentication, v1.GetTranscriptionHistory)
 			speech.DELETE("/history/:id", v1.Authentication, v1.DeleteTranscription)
+
+			// Text-to-Speech (TTS)
+			speech.POST("/synthesize", v1.SynthesizeSpeech)
+			speech.POST("/text-to-speech", v1.SynthesizeSpeech)
+			speech.GET("/voices", v1.GetTTSVoices)
 		}
 	}
 }
