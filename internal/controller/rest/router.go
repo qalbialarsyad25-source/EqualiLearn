@@ -6,11 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(app *gin.Engine, v1 *V1, wsHandler *delivery.SpeechWSHandler) {
+func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandler, chatWSHandler *delivery.ChatWSHandler) {
 	// Serve public assets / test demo pages
 	app.Static("/public", "./public")
 	app.StaticFile("/demo", "./public/speech_test.html")
 	app.StaticFile("/summary-demo", "./public/document_summary_demo.html")
+	app.StaticFile("/chat-demo", "./public/chat_demo.html")
 
 	api := app.Group("/api/v1")
 	{
@@ -25,10 +26,17 @@ func NewRouter(app *gin.Engine, v1 *V1, wsHandler *delivery.SpeechWSHandler) {
 			auth.POST("/reset-password", v1.ResetPassword)
 		}
 
+		// User discovery endpoints
+		users := api.Group("/users")
+		{
+			users.GET("/search", v1.Authentication, v1.SearchUsers)
+		}
+
 		// Real-time WebSocket endpoints
 		ws := api.Group("/ws")
 		{
-			ws.GET("/speech-to-text", wsHandler.HandleRealtimeSTT)
+			ws.GET("/speech-to-text", speechWSHandler.HandleRealtimeSTT)
+			ws.GET("/chat", chatWSHandler.HandleGroupChat)
 		}
 
 		// Speech transcription and Text-to-Speech REST endpoints
@@ -52,6 +60,17 @@ func NewRouter(app *gin.Engine, v1 *V1, wsHandler *delivery.SpeechWSHandler) {
 			documents.GET("/history", v1.Authentication, v1.GetDocumentSummaries)
 			documents.GET("/:id", v1.GetDocumentSummaryByID)
 			documents.DELETE("/:id", v1.Authentication, v1.DeleteDocumentSummary)
+		}
+
+		// Collaborative Group Chat REST endpoints
+		groups := api.Group("/groups")
+		{
+			groups.POST("", v1.Authentication, v1.CreateGroup)
+			groups.GET("", v1.Authentication, v1.GetUserGroups)
+			groups.GET("/:id", v1.Authentication, v1.GetGroupDetail)
+			groups.POST("/:id/members", v1.Authentication, v1.AddGroupMember)
+			groups.DELETE("/:id/members/:userId", v1.Authentication, v1.RemoveGroupMember)
+			groups.GET("/:id/messages", v1.Authentication, v1.GetGroupMessages)
 		}
 	}
 }

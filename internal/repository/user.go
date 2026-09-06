@@ -22,6 +22,7 @@ type IUserRepository interface {
 	GetUserByResetToken(ctx context.Context, token string) (*entity.User, error)
 	UpdatePassword(ctx context.Context, id uuid.UUID, password string) error
 	ClearResetToken(ctx context.Context, id uuid.UUID) error
+	SearchUsers(ctx context.Context, query string, limit int) ([]entity.User, error)
 }
 
 type UserRepository struct {
@@ -113,4 +114,28 @@ func (r *UserRepository) ClearResetToken(ctx context.Context, id uuid.UUID) erro
 		"reset_token":         "",
 		"reset_token_expired": nil,
 	}).Error
+}
+
+func (r *UserRepository) SearchUsers(ctx context.Context, query string, limit int) ([]entity.User, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	var users []entity.User
+	parsedUUID, err := uuid.Parse(query)
+	dbQuery := r.db.WithContext(ctx).Limit(limit)
+
+	if err == nil {
+		// Exact match by UUID or pattern match on email/name
+		dbQuery = dbQuery.Where("id = ? OR email ILIKE ? OR name ILIKE ?", parsedUUID, "%"+query+"%", "%"+query+"%")
+	} else {
+		// Pattern match on email and name
+		dbQuery = dbQuery.Where("email ILIKE ? OR name ILIKE ?", "%"+query+"%", "%"+query+"%")
+	}
+
+	if err := dbQuery.Order("name ASC").Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

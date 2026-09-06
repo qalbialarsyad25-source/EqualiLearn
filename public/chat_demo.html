@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EquiliLearn Real-Time Group Chat & Discovery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --panel-bg: rgba(22, 30, 49, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.35);
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --chat-me: linear-gradient(135deg, #6366f1, #4f46e5);
+      --chat-other: rgba(30, 41, 59, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at 10% 20%, #171d33 0%, #0b0f19 90%);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 14px 24px;
+      background: rgba(11, 15, 25, 0.85);
+      border-bottom: 1px solid var(--panel-border);
+      backdrop-filter: blur(12px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .brand-logo svg {
+      width: 22px;
+      height: 22px;
+      color: white;
+    }
+
+    .brand-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+    }
+
+    .status-dot.offline {
+      background: var(--text-dim);
+      box-shadow: none;
+    }
+
+    /* Main Container */
+    .chat-layout {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      flex: 1;
+      height: calc(100vh - 67px);
+      overflow: hidden;
+    }
+
+    /* Left Sidebar */
+    .sidebar {
+      background: var(--panel-bg);
+      border-right: 1px solid var(--panel-border);
+      backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sidebar-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .btn-create-group {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-create-group:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    /* Search User Input */
+    .search-box {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px 9px 34px;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+    }
+
+    /* Search Dropdown / Results */
+    .search-results-overlay {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #131a2e;
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-sm);
+      margin-top: 4px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 50;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      display: none;
+    }
+
+    .search-user-item {
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .search-user-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .search-user-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .search-user-email {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .btn-add-user {
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    /* Groups List */
+    .groups-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .group-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .group-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .group-item.active {
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(99, 102, 241, 0.35);
+    }
+
+    .group-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .group-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .group-name {
+      font-size: 0.92rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .group-last-msg {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .group-badge {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+    }
+
+    /* Right Chat Main Area */
+    .chat-main {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: rgba(11, 15, 25, 0.4);
+      position: relative;
+    }
+
+    /* Chat Header */
+    .chat-header {
+      padding: 14px 24px;
+      background: rgba(22, 30, 49, 0.5);
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-header-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .chat-header-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .chat-header-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .chat-header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-header-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-header-action:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Messages Stream Container */
+    .messages-container {
+      flex: 1;
+      padding: 20px 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .empty-chat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-dim);
+      text-align: center;
+      gap: 10px;
+    }
+
+    /* Message Bubbles */
+    .message-row {
+      display: flex;
+      gap: 10px;
+      max-width: 75%;
+    }
+
+    .message-row.me {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .message-content-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .message-sender {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .message-row.me .message-sender {
+      display: none;
+    }
+
+    .message-bubble {
+      padding: 10px 16px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      word-break: break-word;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .message-row.me .message-bubble {
+      background: var(--chat-me);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-row.other .message-bubble {
+      background: var(--chat-other);
+      border: 1px solid var(--panel-border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-time {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      align-self: flex-end;
+      margin-top: 2px;
+    }
+
+    .message-row.me .message-time {
+      align-self: flex-end;
+    }
+
+    /* Typing Bar */
+    .typing-indicator {
+      padding: 6px 24px;
+      font-size: 0.78rem;
+      color: var(--accent-cyan);
+      min-height: 24px;
+      font-style: italic;
+    }
+
+    /* Input Bar */
+    .chat-input-bar {
+      padding: 16px 24px;
+      background: rgba(22, 30, 49, 0.8);
+      border-top: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 12px 20px;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .chat-input:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-send {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px var(--primary-glow);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-send:hover {
+      background: var(--primary-hover);
+      transform: scale(1.05);
+    }
+
+    /* Modal Styling */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-card {
+      background: #182238;
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 480px;
+      max-width: 90vw;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .form-input {
+      background: rgba(11, 15, 25, 0.7);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+    }
+
+    .selected-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .chip {
+      background: rgba(99, 102, 241, 0.2);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #c7d2fe;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chip-close {
+      cursor: pointer;
+      color: #f43f5e;
+      font-weight: bold;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    /* Auth Banner / Setup */
+    .auth-banner {
+      background: rgba(99, 102, 241, 0.1);
+      border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+    }
+
+    .auth-banner input {
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid var(--panel-border);
+      border-radius: 4px;
+      padding: 4px 10px;
+      color: white;
+      font-size: 0.8rem;
+      width: 280px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <a href="/chat-demo" class="brand">
+      <div class="brand-logo">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-name">EquiliLearn Chat</div>
+        <div style="font-size: 0.72rem; color: var(--text-dim);">Real-Time WebSocket Group Messaging</div>
+      </div>
+    </a>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="/summary-demo" class="btn-header-action">Document AI</a>
+      <a href="/demo" class="btn-header-action">Speech STT</a>
+      <div class="user-pill" id="userPill">
+        <span class="status-dot" id="wsStatusDot"></span>
+        <span id="userNameDisplay">Not Connected</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Auth / Token Quick Switcher Bar -->
+  <div class="auth-banner">
+    <span>🔑 <strong>JWT Token:</strong></span>
+    <input type="password" id="jwtTokenInput" placeholder="Paste your Bearer token or login...">
+    <button class="btn-create-group" onclick="applyTokenAndConnect()">Connect WebSocket</button>
+    <span style="color: var(--text-dim); margin-left: auto; font-size: 0.75rem;">Tip: Login via /api/v1/auth/login or paste existing token</span>
+  </div>
+
+  <!-- Main Chat Grid -->
+  <div class="chat-layout">
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <div class="sidebar-title">Groups & Peers</div>
+          <button class="btn-create-group" onclick="openCreateGroupModal()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            New Group
+          </button>
+        </div>
+
+        <!-- User Search -->
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input type="text" class="search-input" id="userSearchInput" placeholder="Search user by Email or Name..." oninput="onUserSearchInput(this.value)">
+          <div class="search-results-overlay" id="searchResultsOverlay"></div>
+        </div>
+      </div>
+
+      <!-- Groups List -->
+      <div class="groups-list" id="groupsList">
+        <div style="padding: 20px; text-align: center; color: var(--text-dim); font-size: 0.85rem;">
+          Connect token to load your groups
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Chat Window -->
+    <div class="chat-main">
+      <!-- Active Group Header -->
+      <div class="chat-header" id="chatHeader" style="display: none;">
+        <div class="chat-header-info">
+          <div class="group-avatar" id="activeGroupAvatar">G</div>
+          <div>
+            <div class="chat-header-title" id="activeGroupName">Group Name</div>
+            <div class="chat-header-desc" id="activeGroupMeta">3 members • Created by ...</div>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="btn-header-action" onclick="openAddMemberModal()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            Add Member
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Stream -->
+      <div class="messages-container" id="messagesContainer">
+        <div class="empty-chat" id="emptyChatPlaceholder">
+          <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          <div style="font-size: 1.1rem; font-weight: 600;">Select or Create a Group</div>
+          <p style="font-size: 0.85rem; max-width: 320px;">Choose a group on the left to start collaborating in real time with WebSocket sync.</p>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator" id="typingIndicator"></div>
+
+      <!-- Chat Input Bar -->
+      <div class="chat-input-bar" id="chatInputBar" style="display: none;">
+        <input type="text" class="chat-input" id="messageInput" placeholder="Type your message... (Press Enter to send)" onkeydown="handleInputKeyDown(event)" oninput="handleTypingEvent()">
+        <button class="btn-send" onclick="sendMessage()">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Group Modal -->
+  <div class="modal-overlay" id="createGroupModal">
+    <div class="modal-card">
+      <div class="modal-title">Create New Group</div>
+      <div class="form-field">
+        <label class="form-label">Group Name</label>
+        <input type="text" class="form-input" id="newGroupName" placeholder="e.g. AI & Machine Learning Study Hub">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Description (Optional)</label>
+        <input type="text" class="form-input" id="newGroupDesc" placeholder="e.g. Discussion on weekly lectures and assignments">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Initial Members (Search by email)</label>
+        <input type="text" class="form-input" id="modalMemberSearchInput" placeholder="Type email to search..." oninput="onModalMemberSearch(this.value)">
+        <div class="selected-chips" id="selectedMembersChips"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeCreateGroupModal()">Cancel</button>
+        <button class="btn-create-group" onclick="submitCreateGroup()">Create Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Member Modal -->
+  <div class="modal-overlay" id="addMemberModal">
+    <div class="modal-card">
+      <div class="modal-title">Add Member to Group</div>
+      <div class="form-field">
+        <label class="form-label">Search User by Email or Name</label>
+        <input type="text" class="form-input" id="addMemberSearchInput" placeholder="Search email..." oninput="onAddMemberSearch(this.value)">
+        <div id="addMemberSearchResults" style="margin-top: 8px; max-height: 180px; overflow-y: auto;"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeAddMemberModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let authToken = localStorage.getItem('equili_jwt') || '';
+    let currentUserID = '';
+    let currentGroupID = null;
+    let ws = null;
+    let typingTimeout = null;
+    let selectedGroupMembers = []; // for create modal
+
+    // Load saved token on start
+    if (authToken) {
+      document.getElementById('jwtTokenInput').value = authToken;
+      applyTokenAndConnect();
+    }
+
+    function applyTokenAndConnect() {
+      const tokenVal = document.getElementById('jwtTokenInput').value.trim();
+      if (!tokenVal) {
+        alert('Please enter a JWT token');
+        return;
+      }
+      authToken = tokenVal;
+      localStorage.setItem('equili_jwt', authToken);
+
+      initWebSocket();
+      loadUserGroups();
+    }
+
+    function initWebSocket() {
+      if (ws) {
+        ws.close();
+      }
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/api/v1/ws/chat?token=${encodeURIComponent(authToken)}`;
+
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        document.getElementById('wsStatusDot').classList.remove('offline');
+        document.getElementById('userNameDisplay').textContent = 'Online';
+        if (currentGroupID) {
+          ws.send(JSON.stringify({ type: 'join_group', group_id: currentGroupID }));
+        }
+      };
+
+      ws.onclose = () => {
+        document.getElementById('wsStatusDot').classList.add('offline');
+        document.getElementById('userNameDisplay').textContent = 'Disconnected';
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          handleWebSocketMessage(msg);
+        } catch (e) {
+          console.error('Error parsing WS message:', e);
+        }
+      };
+    }
+
+    function handleWebSocketMessage(msg) {
+      switch (msg.type) {
+        case 'connected':
+          currentUserID = msg.payload.user_id;
+          document.getElementById('userNameDisplay').textContent = `User ID: ${currentUserID.slice(0, 8)}...`;
+          break;
+
+        case 'chat_message':
+          if (msg.group_id === currentGroupID) {
+            appendMessage(msg.payload);
+            scrollToBottom();
+          }
+          // Update last message in left sidebar
+          updateGroupLastMessage(msg.group_id, msg.payload);
+          break;
+
+        case 'typing':
+          if (msg.group_id === currentGroupID && msg.payload.user_id !== currentUserID) {
+            showTypingIndicator(`Someone is typing...`);
+          }
+          break;
+
+        case 'error':
+          console.warn('WS Error:', msg.payload);
+          break;
+      }
+    }
+
+    async function loadUserGroups() {
+      try {
+        const res = await fetch('/api/v1/groups', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!res.ok) throw new Error('Failed to load groups');
+        const data = await res.json();
+        renderGroupsList(data.data || []);
+      } catch (err) {
+        console.error('Failed to load groups:', err);
+      }
+    }
+
+    function renderGroupsList(groups) {
+      const container = document.getElementById('groupsList');
+      if (groups.length === 0) {
+        container.innerHTML = `
+          <div style="padding: 24px 16px; text-align: center; color: var(--text-dim); font-size: 0.85rem;">
+            No groups found.<br>Click <strong>+ New Group</strong> to create one!
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = groups.map(g => {
+        const initial = g.name.charAt(0).toUpperCase();
+        const lastMsg = g.last_message ? `${g.last_message.sender_name}: ${g.last_message.content}` : (g.description || 'No messages yet');
+        const isActive = g.id === currentGroupID ? 'active' : '';
+
+        return `
+          <div class="group-item ${isActive}" onclick="selectGroup('${g.id}')">
+            <div class="group-avatar">${initial}</div>
+            <div class="group-info">
+              <div class="group-name">${escapeHtml(g.name)}</div>
+              <div class="group-last-msg">${escapeHtml(lastMsg)}</div>
+            </div>
+            <span class="group-badge">${g.member_count}m</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function selectGroup(groupId) {
+      if (currentGroupID && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'leave_group', group_id: currentGroupID }));
+      }
+
+      currentGroupID = groupId;
+
+      // Update active style in sidebar
+      document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
+      const activeEl = Array.from(document.querySelectorAll('.group-item')).find(el => el.getAttribute('onclick')?.includes(groupId));
+      if (activeEl) activeEl.classList.add('active');
+
+      // Join room via WebSocket
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'join_group', group_id: groupId }));
+      }
+
+      // Load group detail & messages
+      try {
+        const [detailRes, msgRes] = await Promise.all([
+          fetch(`/api/v1/groups/${groupId}`, { headers: { 'Authorization': `Bearer ${authToken}` } }),
+          fetch(`/api/v1/groups/${groupId}/messages?limit=50`, { headers: { 'Authorization': `Bearer ${authToken}` } })
+        ]);
+
+        const detailData = await detailRes.json();
+        const msgData = await msgRes.json();
+
+        renderActiveGroupHeader(detailData.data);
+        renderMessages(msgData.data || []);
+      } catch (err) {
+        alert('Failed to load group: ' + err.message);
+      }
+    }
+
+    function renderActiveGroupHeader(group) {
+      document.getElementById('emptyChatPlaceholder').style.display = 'none';
+      document.getElementById('chatHeader').style.display = 'flex';
+      document.getElementById('chatInputBar').style.display = 'flex';
+
+      document.getElementById('activeGroupAvatar').textContent = group.name.charAt(0).toUpperCase();
+      document.getElementById('activeGroupName').textContent = group.name;
+      document.getElementById('activeGroupMeta').textContent = `${group.members.length} members • ${group.description || 'General Chat'}`;
+    }
+
+    function renderMessages(messages) {
+      const container = document.getElementById('messagesContainer');
+      container.innerHTML = '';
+
+      if (messages.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; color: var(--text-dim); margin: auto; font-size: 0.85rem;">
+            No messages yet. Send a greeting to start the conversation!
+          </div>
+        `;
+        return;
+      }
+
+      messages.forEach(msg => appendMessage(msg));
+      scrollToBottom();
+    }
+
+    function appendMessage(msg) {
+      const container = document.getElementById('messagesContainer');
+      // If empty placeholder or initial message placeholder is present, clear it
+      if (container.querySelector('.empty-chat') || container.innerText.includes('No messages yet')) {
+        container.innerHTML = '';
+      }
+
+      const isMe = msg.sender_id === currentUserID;
+      const initial = (msg.sender_name || 'U').charAt(0).toUpperCase();
+      const timeStr = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const row = document.createElement('div');
+      row.className = `message-row ${isMe ? 'me' : 'other'}`;
+      row.innerHTML = `
+        <div class="message-avatar">${initial}</div>
+        <div class="message-content-wrapper">
+          <div class="message-sender">${escapeHtml(msg.sender_name || 'User')}</div>
+          <div class="message-bubble">${escapeHtml(msg.content)}</div>
+          <div class="message-time">${timeStr}</div>
+        </div>
+      `;
+      container.appendChild(row);
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text || !currentGroupID || !ws) return;
+
+      ws.send(JSON.stringify({
+        type: 'chat_message',
+        group_id: currentGroupID,
+        content: text,
+        message_type: 'text'
+      }));
+
+      input.value = '';
+    }
+
+    function handleInputKeyDown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function handleTypingEvent() {
+      if (!currentGroupID || !ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({
+        type: 'typing',
+        group_id: currentGroupID
+      }));
+    }
+
+    function showTypingIndicator(text) {
+      const el = document.getElementById('typingIndicator');
+      el.textContent = text;
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        el.textContent = '';
+      }, 2000);
+    }
+
+    function scrollToBottom() {
+      const container = document.getElementById('messagesContainer');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function updateGroupLastMessage(groupId, msg) {
+      // Refresh groups list in background
+      loadUserGroups();
+    }
+
+    // User Search Handling
+    let searchDebounce = null;
+    function onUserSearchInput(q) {
+      clearTimeout(searchDebounce);
+      const overlay = document.getElementById('searchResultsOverlay');
+      if (!q.trim()) {
+        overlay.style.display = 'none';
+        return;
+      }
+
+      searchDebounce = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/v1/users/search?q=${encodeURIComponent(q.trim())}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          const data = await res.json();
+          renderSearchResults(data.data || []);
+        } catch (e) {
+          console.error(e);
+        }
+      }, 250);
+    }
+
+    function renderSearchResults(users) {
+      const overlay = document.getElementById('searchResultsOverlay');
+      if (users.length === 0) {
+        overlay.innerHTML = `<div style="padding: 10px; font-size: 0.8rem; color: var(--text-dim);">No users found</div>`;
+      } else {
+        overlay.innerHTML = users.map(u => `
+          <div class="search-user-item">
+            <div>
+              <div class="search-user-name">${escapeHtml(u.name)}</div>
+              <div class="search-user-email">${escapeHtml(u.email)}</div>
+            </div>
+            <button class="btn-add-user" onclick="quickAddUserToModal('${u.id}', '${escapeHtml(u.name)}', '${escapeHtml(u.email)}')">+ Add</button>
+          </div>
+        `).join('');
+      }
+      overlay.style.display = 'block';
+    }
+
+    function quickAddUserToModal(id, name, email) {
+      document.getElementById('searchResultsOverlay').style.display = 'none';
+      openCreateGroupModal();
+      addMemberChip(id, name, email);
+    }
+
+    function addMemberChip(id, name, email) {
+      if (selectedGroupMembers.some(m => m.id === id)) return;
+      selectedGroupMembers.push({ id, name, email });
+      renderMemberChips();
+    }
+
+    function removeMemberChip(id) {
+      selectedGroupMembers = selectedGroupMembers.filter(m => m.id !== id);
+      renderMemberChips();
+    }
+
+    function renderMemberChips() {
+      const container = document.getElementById('selectedMembersChips');
+      container.innerHTML = selectedGroupMembers.map(m => `
+        <span class="chip">
+          ${escapeHtml(m.name)} (${escapeHtml(m.email)})
+          <span class="chip-close" onclick="removeMemberChip('${m.id}')">&times;</span>
+        </span>
+      `).join('');
+    }
+
+    // Create Group Modal
+    function openCreateGroupModal() {
+      document.getElementById('createGroupModal').style.display = 'flex';
+      renderMemberChips();
+    }
+
+    function closeCreateGroupModal() {
+      document.getElementById('createGroupModal').style.display = 'none';
+    }
+
+    async function submitCreateGroup() {
+      const name = document.getElementById('newGroupName').value.trim();
+      const desc = document.getElementById('newGroupDesc').value.trim();
+      if (!name) {
+        alert('Group name is required');
+        return;
+      }
+
+      const memberIds = selectedGroupMembers.map(m => m.id);
+
+      try {
+        const res = await fetch('/api/v1/groups', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({
+            name: name,
+            description: desc,
+            member_user_ids: memberIds
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to create group');
+
+        closeCreateGroupModal();
+        document.getElementById('newGroupName').value = '';
+        document.getElementById('newGroupDesc').value = '';
+        selectedGroupMembers = [];
+
+        await loadUserGroups();
+        selectGroup(data.data.id);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // Add Member Modal
+    function openAddMemberModal() {
+      document.getElementById('addMemberModal').style.display = 'flex';
+    }
+
+    function closeAddMemberModal() {
+      document.getElementById('addMemberModal').style.display = 'none';
+    }
+
+    let addMemberDebounce = null;
+    function onAddMemberSearch(q) {
+      clearTimeout(addMemberDebounce);
+      if (!q.trim()) return;
+
+      addMemberDebounce = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/v1/users/search?q=${encodeURIComponent(q.trim())}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          const data = await res.json();
+          const container = document.getElementById('addMemberSearchResults');
+          const users = data.data || [];
+          if (users.length === 0) {
+            container.innerHTML = `<div style="color: var(--text-dim); font-size: 0.8rem;">No users found</div>`;
+          } else {
+            container.innerHTML = users.map(u => `
+              <div class="search-user-item">
+                <div>
+                  <div class="search-user-name">${escapeHtml(u.name)}</div>
+                  <div class="search-user-email">${escapeHtml(u.email)}</div>
+                </div>
+                <button class="btn-create-group" style="padding: 4px 10px; font-size: 0.75rem;" onclick="submitAddMember('${u.id}')">Add to Group</button>
+              </div>
+            `).join('');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }, 250);
+    }
+
+    async function submitAddMember(userId) {
+      if (!currentGroupID) return;
+      try {
+        const res = await fetch(`/api/v1/groups/${currentGroupID}/members`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ user_id: userId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to add member');
+
+        alert('Member added successfully!');
+        closeAddMemberModal();
+        selectGroup(currentGroupID);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+    }
+
+    // Hide search popup on click outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-box')) {
+        document.getElementById('searchResultsOverlay').style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

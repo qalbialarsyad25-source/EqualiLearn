@@ -42,10 +42,13 @@ func Run() {
 	wsManager := delivery.NewWSManager()
 	speechWSHandler := delivery.NewSpeechWSHandler(wsManager, svc.SpeechService, jwtService)
 
+	chatHub := delivery.NewChatHub()
+	chatWSHandler := delivery.NewChatWSHandler(chatHub, svc.GroupChatService, jwtService)
+
 	app := server.Start()
 
 	// Register REST and WebSocket API endpoints
-	rest.NewRouter(app, v1, speechWSHandler)
+	rest.NewRouter(app, v1, speechWSHandler, chatWSHandler)
 
 	port := os.Getenv("APP_PORT")
 	if port == "" {
