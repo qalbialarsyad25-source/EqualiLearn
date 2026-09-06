@@ -7,9 +7,10 @@ import (
 )
 
 func NewRouter(app *gin.Engine, v1 *V1, wsHandler *delivery.SpeechWSHandler) {
-	// Serve public assets / test demo page
+	// Serve public assets / test demo pages
 	app.Static("/public", "./public")
 	app.StaticFile("/demo", "./public/speech_test.html")
+	app.StaticFile("/summary-demo", "./public/document_summary_demo.html")
 
 	api := app.Group("/api/v1")
 	{
@@ -41,6 +42,16 @@ func NewRouter(app *gin.Engine, v1 *V1, wsHandler *delivery.SpeechWSHandler) {
 			speech.POST("/synthesize", v1.SynthesizeSpeech)
 			speech.POST("/text-to-speech", v1.SynthesizeSpeech)
 			speech.GET("/voices", v1.GetTTSVoices)
+		}
+
+		// AI Document & Presentation Summarization REST endpoints (Gemini)
+		documents := api.Group("/documents")
+		{
+			documents.POST("/summarize", v1.SummarizeDocument)
+			documents.POST("/summarize-text", v1.SummarizeText)
+			documents.GET("/history", v1.Authentication, v1.GetDocumentSummaries)
+			documents.GET("/:id", v1.GetDocumentSummaryByID)
+			documents.DELETE("/:id", v1.Authentication, v1.DeleteDocumentSummary)
 		}
 	}
 }
