@@ -10,6 +10,7 @@ import (
 	"EquiliLearn/internal/service"
 	oauth "EquiliLearn/pkg/Oauth"
 	"EquiliLearn/pkg/bcrypt"
+	"EquiliLearn/pkg/gemini"
 	server "EquiliLearn/pkg/gin"
 	"EquiliLearn/pkg/jwt"
 	"EquiliLearn/pkg/middleware"
@@ -29,8 +30,9 @@ func Run() {
 	oauthConfig := oauth.GoogleOAuthConfig()
 	sttClient := stt.NewSTTClient()
 	ttsClient := tts.NewTTSClient()
+	geminiClient := gemini.NewGeminiClient()
 
-	svc := service.NewService(jwtService, bcryptService, oauthConfig, repo, sttClient, ttsClient)
+	svc := service.NewService(jwtService, bcryptService, oauthConfig, repo, sttClient, ttsClient, geminiClient)
 
 	mid := middleware.NewMiddleware(jwtService)
 	val := validator.New()
