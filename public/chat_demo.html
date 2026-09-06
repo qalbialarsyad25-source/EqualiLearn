@@ -639,23 +639,67 @@
 
     /* Auth Banner / Setup */
     .auth-banner {
-      background: rgba(99, 102, 241, 0.1);
-      border-bottom: 1px solid rgba(99, 102, 241, 0.25);
+      background: rgba(99, 102, 241, 0.08);
+      border-bottom: 1px solid rgba(99, 102, 241, 0.2);
       padding: 10px 24px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
       font-size: 0.85rem;
+    }
+
+    .auth-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .auth-banner-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-demo-user {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #e0e7ff;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-demo-user:hover {
+      background: rgba(99, 102, 241, 0.35);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .btn-demo-user.active {
+      background: var(--primary);
+      border-color: #818cf8;
+      color: white;
+      box-shadow: 0 0 12px var(--primary-glow);
     }
 
     .auth-banner input {
       background: rgba(11, 15, 25, 0.8);
       border: 1px solid var(--panel-border);
       border-radius: 4px;
-      padding: 4px 10px;
+      padding: 5px 10px;
       color: white;
-      font-size: 0.8rem;
-      width: 280px;
+      font-size: 0.78rem;
+      width: 180px;
     }
   </style>
 </head>
@@ -686,11 +730,18 @@
 
   <!-- Auth / Token Quick Switcher Bar -->
   <div class="auth-banner">
-    <span>🔑 <strong>Auth:</strong></span>
-    <button class="btn-create-group" style="padding: 6px 12px; background: #3b82f6;" onclick="openAuthModal()">Login / Register</button>
-    <input type="password" id="jwtTokenInput" placeholder="Or paste Bearer JWT token (eyJ...)" style="margin-left: 10px;">
-    <button class="btn-create-group" onclick="applyTokenAndConnect()">Connect WebSocket</button>
-    <span style="color: var(--text-dim); margin-left: auto; font-size: 0.75rem;">Click "Login / Register" or paste an existing JWT token</span>
+    <div class="auth-banner-left">
+      <span style="font-weight: 600; color: #a5b4fc; font-size: 0.82rem;">⚡ Quick Test Users:</span>
+      <button class="btn-demo-user" id="btnUserAlice" onclick="quickLogin('alice@example.com', 'Password123!', 'Alice')">👩 Alice</button>
+      <button class="btn-demo-user" id="btnUserBob" onclick="quickLogin('bob@example.com', 'Password123!', 'Bob')">👨 Bob</button>
+      <button class="btn-demo-user" id="btnUserCharlie" onclick="quickLogin('charlie@example.com', 'Password123!', 'Charlie')">🧑 Charlie</button>
+      <span id="currentUserLabel" style="color: var(--accent-cyan); font-weight: 500; font-size: 0.8rem; margin-left: 6px;"></span>
+    </div>
+    <div class="auth-banner-right">
+      <button class="btn-create-group" style="padding: 5px 12px; background: rgba(255, 255, 255, 0.08); font-size: 0.78rem;" onclick="openAuthModal()">Custom Auth</button>
+      <input type="password" id="jwtTokenInput" placeholder="Paste JWT token...">
+      <button class="btn-create-group" style="padding: 5px 12px; font-size: 0.78rem;" onclick="applyTokenAndConnect()">Connect</button>
+    </div>
   </div>
 
   <!-- Main Chat Grid -->
@@ -914,16 +965,62 @@
 
     let authToken = localStorage.getItem('equili_jwt') || '';
     let currentUserID = '';
+    let currentUserName = localStorage.getItem('equili_user_name') || '';
     let currentGroupID = null;
     let ws = null;
     let typingTimeout = null;
     let selectedGroupMembers = []; // for create modal
 
-    // Load saved token on start
-    if (authToken) {
-      document.getElementById('jwtTokenInput').value = authToken;
-      applyTokenAndConnect();
+    async function quickLogin(email, password, displayName) {
+      // Highlight button
+      document.querySelectorAll('.btn-demo-user').forEach(b => b.classList.remove('active'));
+      const btnId = `btnUser${displayName}`;
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.add('active');
+
+      const label = document.getElementById('currentUserLabel');
+      if (label) label.textContent = `• Logged in as ${displayName}`;
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to authenticate demo user');
+        }
+
+        document.getElementById('jwtTokenInput').value = data.token;
+        authToken = data.token;
+        currentUserName = displayName;
+        localStorage.setItem('equili_jwt', authToken);
+        localStorage.setItem('equili_user_name', currentUserName);
+
+        applyTokenAndConnect();
+      } catch (err) {
+        console.error('Quick login error:', err);
+        alert(`Quick login failed: ${err.message}`);
+      }
     }
+
+    // Auto-init demo on start
+    window.addEventListener('DOMContentLoaded', () => {
+      if (authToken) {
+        document.getElementById('jwtTokenInput').value = authToken;
+        if (currentUserName) {
+          const btn = document.getElementById(`btnUser${currentUserName}`);
+          if (btn) btn.classList.add('active');
+          const label = document.getElementById('currentUserLabel');
+          if (label) label.textContent = `• Logged in as ${currentUserName}`;
+        }
+        applyTokenAndConnect();
+      } else {
+        // Automatically sign in as Alice by default
+        quickLogin('alice@example.com', 'Password123!', 'Alice');
+      }
+    });
 
     function applyTokenAndConnect() {
       const tokenVal = document.getElementById('jwtTokenInput').value.trim();
@@ -950,7 +1047,8 @@
 
       ws.onopen = () => {
         document.getElementById('wsStatusDot').classList.remove('offline');
-        document.getElementById('userNameDisplay').textContent = 'Online';
+        const displayLabel = currentUserName ? `${currentUserName} (Online)` : 'Online';
+        document.getElementById('userNameDisplay').textContent = displayLabel;
         if (currentGroupID) {
           ws.send(JSON.stringify({ type: 'join_group', group_id: currentGroupID }));
         }
@@ -975,7 +1073,8 @@
       switch (msg.type) {
         case 'connected':
           currentUserID = msg.payload.user_id;
-          document.getElementById('userNameDisplay').textContent = `User ID: ${currentUserID.slice(0, 8)}...`;
+          const namePrefix = currentUserName ? `${currentUserName} • ` : '';
+          document.getElementById('userNameDisplay').textContent = `${namePrefix}ID: ${currentUserID.slice(0, 8)}...`;
           break;
 
         case 'chat_message':
@@ -1006,7 +1105,13 @@
         });
         if (!res.ok) throw new Error('Failed to load groups');
         const data = await res.json();
-        renderGroupsList(data.data || []);
+        const groups = data.data || [];
+        renderGroupsList(groups);
+
+        // Auto-select first group if none selected
+        if (!currentGroupID && groups.length > 0) {
+          selectGroup(groups[0].id);
+        }
       } catch (err) {
         console.error('Failed to load groups:', err);
       }

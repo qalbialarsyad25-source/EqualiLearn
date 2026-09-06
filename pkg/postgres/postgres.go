@@ -21,6 +21,7 @@ func StartPostgres() *gorm.DB {
 	}
 
 	migrate(db)
+	SeedDefaultData(db)
 
 	return db
 }
