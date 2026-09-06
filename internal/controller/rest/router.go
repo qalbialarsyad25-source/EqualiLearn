@@ -7,12 +7,6 @@ import (
 )
 
 func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandler, chatWSHandler *delivery.ChatWSHandler) {
-	// Serve public assets / test demo pages
-	app.Static("/public", "./public")
-	app.StaticFile("/demo", "./public/speech_test.html")
-	app.StaticFile("/summary-demo", "./public/document_summary_demo.html")
-	app.StaticFile("/chat-demo", "./public/chat_demo.html")
-
 	api := app.Group("/api/v1")
 	{
 		// Authentication endpoints
