@@ -1,7 +1,6 @@
 package rest
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,7 +25,7 @@ func (r *V1) SearchUsers(c *gin.Context) {
 	ctx := c.Request.Context()
 	users, err := r.service.GroupChatService.SearchUsers(ctx, query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to search users: %v", err)})
+		RespondError(c, http.StatusInternalServerError, "Failed to search users")
 		return
 	}
 
@@ -40,30 +39,30 @@ func (r *V1) SearchUsers(c *gin.Context) {
 func (r *V1) CreateGroup(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
 	var req model.CreateGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid request: %v", err)})
+		RespondValidationError(c, err)
 		return
 	}
 
 	if strings.TrimSpace(req.Name) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "group name is required"})
+		RespondError(c, http.StatusBadRequest, "Group name is required")
 		return
 	}
 
 	ctx := c.Request.Context()
 	group, err := r.service.GroupChatService.CreateGroup(ctx, userId, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to create group: %v", err)})
+		RespondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -77,12 +76,12 @@ func (r *V1) CreateGroup(c *gin.Context) {
 func (r *V1) GetUserGroups(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
@@ -97,7 +96,7 @@ func (r *V1) GetUserGroups(c *gin.Context) {
 	ctx := c.Request.Context()
 	groups, total, err := r.service.GroupChatService.GetUserGroups(ctx, userId, pagination)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to get groups: %v", err)})
+		RespondError(c, http.StatusInternalServerError, "Failed to retrieve user groups")
 		return
 	}
 
@@ -115,26 +114,26 @@ func (r *V1) GetUserGroups(c *gin.Context) {
 func (r *V1) GetGroupDetail(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
 	groupIDParam := c.Param("id")
 	groupID, err := uuid.Parse(groupIDParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group id"})
+		RespondError(c, http.StatusBadRequest, "Invalid group ID format")
 		return
 	}
 
 	ctx := c.Request.Context()
 	group, err := r.service.GroupChatService.GetGroupDetail(ctx, groupID, userId)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		RespondError(c, http.StatusForbidden, err.Error())
 		return
 	}
 
@@ -147,32 +146,32 @@ func (r *V1) GetGroupDetail(c *gin.Context) {
 func (r *V1) AddGroupMember(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
 	groupIDParam := c.Param("id")
 	groupID, err := uuid.Parse(groupIDParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group id"})
+		RespondError(c, http.StatusBadRequest, "Invalid group ID format")
 		return
 	}
 
 	var req model.AddGroupMemberRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid request payload: %v", err)})
+		RespondValidationError(c, err)
 		return
 	}
 
 	ctx := c.Request.Context()
 	member, err := r.service.GroupChatService.AddMember(ctx, groupID, userId, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -186,33 +185,33 @@ func (r *V1) AddGroupMember(c *gin.Context) {
 func (r *V1) RemoveGroupMember(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
 	groupIDParam := c.Param("id")
 	groupID, err := uuid.Parse(groupIDParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group id"})
+		RespondError(c, http.StatusBadRequest, "Invalid group ID format")
 		return
 	}
 
 	targetUserIdParam := c.Param("userId")
 	targetUserId, err := uuid.Parse(targetUserIdParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid target user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid target user ID format")
 		return
 	}
 
 	ctx := c.Request.Context()
 	err = r.service.GroupChatService.RemoveMember(ctx, groupID, userId, targetUserId)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		RespondError(c, http.StatusForbidden, err.Error())
 		return
 	}
 
@@ -223,19 +222,19 @@ func (r *V1) RemoveGroupMember(c *gin.Context) {
 func (r *V1) GetGroupMessages(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
 	groupIDParam := c.Param("id")
 	groupID, err := uuid.Parse(groupIDParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group id"})
+		RespondError(c, http.StatusBadRequest, "Invalid group ID format")
 		return
 	}
 
@@ -250,7 +249,7 @@ func (r *V1) GetGroupMessages(c *gin.Context) {
 	ctx := c.Request.Context()
 	messages, total, err := r.service.GroupChatService.GetGroupMessages(ctx, groupID, userId, pagination)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		RespondError(c, http.StatusForbidden, err.Error())
 		return
 	}
 

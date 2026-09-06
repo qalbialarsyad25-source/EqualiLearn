@@ -686,10 +686,11 @@
 
   <!-- Auth / Token Quick Switcher Bar -->
   <div class="auth-banner">
-    <span>🔑 <strong>JWT Token:</strong></span>
-    <input type="password" id="jwtTokenInput" placeholder="Paste your Bearer token or login...">
+    <span>🔑 <strong>Auth:</strong></span>
+    <button class="btn-create-group" style="padding: 6px 12px; background: #3b82f6;" onclick="openAuthModal()">Login / Register</button>
+    <input type="password" id="jwtTokenInput" placeholder="Or paste Bearer JWT token (eyJ...)" style="margin-left: 10px;">
     <button class="btn-create-group" onclick="applyTokenAndConnect()">Connect WebSocket</button>
-    <span style="color: var(--text-dim); margin-left: auto; font-size: 0.75rem;">Tip: Login via /api/v1/auth/login or paste existing token</span>
+    <span style="color: var(--text-dim); margin-left: auto; font-size: 0.75rem;">Click "Login / Register" or paste an existing JWT token</span>
   </div>
 
   <!-- Main Chat Grid -->
@@ -801,7 +802,116 @@
     </div>
   </div>
 
+  <!-- Quick Auth Modal -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-card">
+      <div class="modal-title" id="authModalTitle">Account Login / Register</div>
+      <div class="form-field">
+        <label class="form-label">Name (for registration)</label>
+        <input type="text" class="form-input" id="authName" placeholder="e.g. Alice or Bob">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="authEmail" placeholder="e.g. alice@example.com">
+      </div>
+      <div class="form-field">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="authPassword" placeholder="e.g. password123">
+      </div>
+      <div id="authErrorMsg" style="color: #f43f5e; font-size: 0.8rem; display: none;"></div>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <button class="btn-cancel" onclick="closeAuthModal()">Cancel</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-create-group" style="background: #475569;" onclick="submitRegister()">Register</button>
+          <button class="btn-create-group" onclick="submitLogin()">Login</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
+    function openAuthModal() {
+      document.getElementById('authErrorMsg').style.display = 'none';
+      document.getElementById('authModal').style.display = 'flex';
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').style.display = 'none';
+    }
+
+    async function submitRegister() {
+      const name = document.getElementById('authName').value.trim();
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value.trim();
+
+      if (!name || !email || !password) {
+        showAuthError('Please fill in Name, Email, and Password to register.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (data.errors && Object.keys(data.errors).length > 0) {
+            const fieldMsgs = Object.values(data.errors).join(' • ');
+            throw new Error(fieldMsgs);
+          }
+          throw new Error(data.error || 'Registration failed');
+        }
+
+        // Automatically log in after registration
+        await submitLogin();
+      } catch (err) {
+        showAuthError(err.message);
+      }
+    }
+
+    async function submitLogin() {
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value.trim();
+
+      if (!email || !password) {
+        showAuthError('Please enter Email and Password to login.');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (data.errors && Object.keys(data.errors).length > 0) {
+            const fieldMsgs = Object.values(data.errors).join(' • ');
+            throw new Error(fieldMsgs);
+          }
+          throw new Error(data.error || 'Login failed');
+        }
+
+        document.getElementById('jwtTokenInput').value = data.token;
+        authToken = data.token;
+        localStorage.setItem('equili_jwt', authToken);
+
+        closeAuthModal();
+        applyTokenAndConnect();
+      } catch (err) {
+        showAuthError(err.message);
+      }
+    }
+
+    function showAuthError(msg) {
+      const el = document.getElementById('authErrorMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
     let authToken = localStorage.getItem('equili_jwt') || '';
     let currentUserID = '';
     let currentGroupID = null;

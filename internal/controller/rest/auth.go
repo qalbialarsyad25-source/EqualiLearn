@@ -12,23 +12,25 @@ import (
 func (r *V1) Register(c *gin.Context) {
 	var registerRequest model.UserRegister
 
-	err := c.ShouldBindBodyWithJSON(&registerRequest)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindBodyWithJSON(&registerRequest); err != nil {
+		RespondValidationError(c, err)
 		return
 	}
 
-	err = r.validator.Struct(registerRequest)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// If confirm_password is not sent in simpler payloads, default it to password
+	if registerRequest.ConfirmPassword == "" {
+		registerRequest.ConfirmPassword = registerRequest.Password
+	}
+
+	if err := r.validator.Struct(registerRequest); err != nil {
+		RespondValidationError(c, err)
 		return
 	}
 
 	ctx := c.Request.Context()
-
-	err = r.service.AuthService.Register(ctx, registerRequest)
+	err := r.service.AuthService.Register(ctx, registerRequest)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -39,24 +41,18 @@ func (r *V1) ForgotPassword(c *gin.Context) {
 	var req model.ForgotPasswordRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "request invalid",
-		})
+		RespondValidationError(c, err)
 		return
 	}
 
 	if err := r.validator.Struct(req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		RespondValidationError(c, err)
 		return
 	}
 
 	err := r.service.AuthService.RequestResetPassword(c.Request.Context(), req.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		RespondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -69,24 +65,18 @@ func (r *V1) ResetPassword(c *gin.Context) {
 	var req model.ResetPasswordRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "request invalid",
-		})
+		RespondValidationError(c, err)
 		return
 	}
 
 	if err := r.validator.Struct(req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		RespondValidationError(c, err)
 		return
 	}
 
 	err := r.service.AuthService.ResetPassword(c.Request.Context(), req.Token, req.Password)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Failed to reset password",
-		})
+		RespondError(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -98,22 +88,20 @@ func (r *V1) ResetPassword(c *gin.Context) {
 func (r *V1) Login(c *gin.Context) {
 	var loginRequest model.UserLogin
 
-	err := c.ShouldBindBodyWithJSON(&loginRequest)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindBodyWithJSON(&loginRequest); err != nil {
+		RespondValidationError(c, err)
 		return
 	}
 
-	err = r.validator.Struct(loginRequest)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := r.validator.Struct(loginRequest); err != nil {
+		RespondValidationError(c, err)
 		return
 	}
 
 	ctx := c.Request.Context()
 	token, err := r.service.AuthService.Login(ctx, loginRequest)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid username or password"})
+		RespondError(c, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 

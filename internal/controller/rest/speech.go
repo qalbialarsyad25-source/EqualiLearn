@@ -17,13 +17,13 @@ import (
 func (r *V1) GetTranscriptionHistory(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
@@ -38,7 +38,7 @@ func (r *V1) GetTranscriptionHistory(c *gin.Context) {
 	ctx := c.Request.Context()
 	history, err := r.service.SpeechService.GetTranscriptionHistory(ctx, userId, pagination)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve transcription history"})
+		RespondError(c, http.StatusInternalServerError, "Failed to retrieve transcription history")
 		return
 	}
 
@@ -55,27 +55,27 @@ func (r *V1) GetTranscriptionHistory(c *gin.Context) {
 func (r *V1) DeleteTranscription(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid transcription id"})
+		RespondError(c, http.StatusBadRequest, "Invalid transcription ID format")
 		return
 	}
 
 	ctx := c.Request.Context()
 	err = r.service.SpeechService.DeleteTranscription(ctx, id, userId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete transcription"})
+		RespondError(c, http.StatusInternalServerError, "Failed to delete transcription")
 		return
 	}
 
@@ -92,20 +92,20 @@ func (r *V1) SynthesizeSpeech(c *gin.Context) {
 		req.Voice = c.Query("voice")
 		req.Format = c.Query("format")
 		if req.Text == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "text field is required"})
+			RespondError(c, http.StatusBadRequest, "Text field is required")
 			return
 		}
 	}
 
 	if strings.TrimSpace(req.Text) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "text cannot be empty"})
+		RespondError(c, http.StatusBadRequest, "Text cannot be empty")
 		return
 	}
 
 	ctx := c.Request.Context()
 	output, err := r.service.SpeechService.SynthesizeSpeech(ctx, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("speech synthesis failed: %v", err)})
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Speech synthesis failed: %v", err))
 		return
 	}
 

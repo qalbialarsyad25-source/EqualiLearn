@@ -19,32 +19,32 @@ import (
 func (r *V1) SummarizeDocument(c *gin.Context) {
 	var req model.SummarizeDocumentRequest
 	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid form parameters: %v", err)})
+		RespondValidationError(c, err)
 		return
 	}
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file is required (form field 'file')"})
+		RespondError(c, http.StatusBadRequest, "File is required (multipart field 'file')")
 		return
 	}
 
 	// Max 30MB file size limit
 	if fileHeader.Size > 30*1024*1024 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file size exceeds maximum limit of 30MB"})
+		RespondError(c, http.StatusBadRequest, "File size exceeds the maximum limit of 30MB")
 		return
 	}
 
 	file, err := fileHeader.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to open uploaded file"})
+		RespondError(c, http.StatusInternalServerError, "Failed to read uploaded file")
 		return
 	}
 	defer file.Close()
 
 	fileBytes, err := io.ReadAll(file)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file content"})
+		RespondError(c, http.StatusInternalServerError, "Failed to process file contents")
 		return
 	}
 
@@ -59,7 +59,7 @@ func (r *V1) SummarizeDocument(c *gin.Context) {
 	ctx := c.Request.Context()
 	result, err := r.service.DocumentSummaryService.SummarizeDocument(ctx, req, fileBytes, fileHeader.Filename, contentType, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("summarization failed: %v", err)})
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Summarization failed: %v", err))
 		return
 	}
 
@@ -73,12 +73,12 @@ func (r *V1) SummarizeDocument(c *gin.Context) {
 func (r *V1) SummarizeText(c *gin.Context) {
 	var req model.SummarizeTextRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid request payload: %v", err)})
+		RespondValidationError(c, err)
 		return
 	}
 
 	if strings.TrimSpace(req.Text) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "text field is required and cannot be empty"})
+		RespondError(c, http.StatusBadRequest, "Text content is required and cannot be empty")
 		return
 	}
 
@@ -87,7 +87,7 @@ func (r *V1) SummarizeText(c *gin.Context) {
 	ctx := c.Request.Context()
 	result, err := r.service.DocumentSummaryService.SummarizeText(ctx, req, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("summarization failed: %v", err)})
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Summarization failed: %v", err))
 		return
 	}
 
@@ -101,13 +101,13 @@ func (r *V1) SummarizeText(c *gin.Context) {
 func (r *V1) GetDocumentSummaries(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
@@ -122,7 +122,7 @@ func (r *V1) GetDocumentSummaries(c *gin.Context) {
 	ctx := c.Request.Context()
 	items, total, err := r.service.DocumentSummaryService.GetSummariesByUserID(ctx, userId, pagination)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve summary history"})
+		RespondError(c, http.StatusInternalServerError, "Failed to retrieve summary history")
 		return
 	}
 
@@ -141,18 +141,18 @@ func (r *V1) GetDocumentSummaryByID(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid summary id"})
+		RespondError(c, http.StatusBadRequest, "Invalid document summary ID format")
 		return
 	}
 
 	ctx := c.Request.Context()
 	summary, err := r.service.DocumentSummaryService.GetSummaryByID(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve document summary"})
+		RespondError(c, http.StatusInternalServerError, "Failed to retrieve document summary")
 		return
 	}
 	if summary == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "document summary not found"})
+		RespondError(c, http.StatusNotFound, "Document summary not found")
 		return
 	}
 
@@ -165,20 +165,20 @@ func (r *V1) GetDocumentSummaryByID(c *gin.Context) {
 func (r *V1) DeleteDocumentSummary(c *gin.Context) {
 	userIdVal, exists := c.Get("userId")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
 		return
 	}
 
 	userId, ok := userIdVal.(uuid.UUID)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
 		return
 	}
 
 	idParam := c.Param("id")
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid summary id"})
+		RespondError(c, http.StatusBadRequest, "Invalid document summary ID format")
 		return
 	}
 
@@ -186,14 +186,14 @@ func (r *V1) DeleteDocumentSummary(c *gin.Context) {
 	err = r.service.DocumentSummaryService.DeleteSummary(ctx, id, userId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "document summary not found or unauthorized"})
+			RespondError(c, http.StatusNotFound, "Document summary not found or unauthorized")
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete document summary"})
+		RespondError(c, http.StatusInternalServerError, "Failed to delete document summary")
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "document summary deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Document summary deleted successfully"})
 }
 
 // Helper to extract optional authenticated user ID from context or header

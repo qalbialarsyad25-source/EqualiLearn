@@ -44,21 +44,23 @@ func NewAuthService(jwt *jwt.JWT, bcrypt bcrypt.IBcrypt, oAuth2 *oauth2.Config, 
 }
 
 func (u *AuthService) Register(ctx context.Context, a model.UserRegister) error {
-
 	a.Email = strings.ToLower(strings.TrimSpace(a.Email))
 
-	if !strings.HasSuffix(a.Email, "@gmail.com") {
-		return errors.New("must use @gmail.com")
+	if !strings.Contains(a.Email, "@") || !strings.Contains(a.Email, ".") {
+		return errors.New("invalid email format")
 	}
+
 	existingUser, _ := u.UserRepository.GetUserByEmail(ctx, a.Email)
 	if existingUser != nil {
-		return errors.New("email already used")
+		return errors.New("email is already registered")
 	}
 
-	a.Email = strings.ToLower(a.Email)
+	if len(a.Password) < 8 {
+		return errors.New("password must be at least 8 characters long")
+	}
 
 	if a.Password != a.ConfirmPassword {
-		return errors.New("Password do not match")
+		return errors.New("passwords do not match")
 	}
 
 	hashedPassword, err := u.Bcrypt.GenerateHash(a.Password)
