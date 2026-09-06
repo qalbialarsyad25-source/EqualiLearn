@@ -7,12 +7,14 @@ import (
 type Repository struct {
 	UserRepository          IUserRepository
 	TranscriptionRepository ITranscriptionRepository
+	DocumentSummaryRepository IDocumentSummaryRepository
 }
 
 
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
-		UserRepository:          NewUserRepository(db),
-		TranscriptionRepository: NewTranscriptionRepository(db),
+		UserRepository:            NewUserRepository(db),
+		TranscriptionRepository:   NewTranscriptionRepository(db),
+		DocumentSummaryRepository: NewDocumentSummaryRepository(db),
 	}
 }
