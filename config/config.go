@@ -10,6 +10,6 @@ func NewConfig() {
 	err := godotenv.Load(".env")
 
 	if err != nil {
-		log.Fatal("Invalid .env File")
+		log.Println("No .env file found, reading from environment variables")
 	}
 }

@@ -28,8 +28,8 @@ services:
     container_name: equillearn-redis
     restart: always
 
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"  # disabled — local Redis already uses this port
 
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -53,6 +53,10 @@ services:
 
     env_file:
       - .env
+
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
 
 volumes:
   postgres_data:
