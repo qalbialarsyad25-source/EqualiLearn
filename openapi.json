@@ -1,0 +1,2013 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "EquiliLearn API",
+    "description": "Comprehensive API specification for EquiliLearn backend. Includes Authentication, Real-Time Group Chat, AI Document & Slide Summarization (Gemini), and Speech STT/TTS services. All examples and responses are in full English for Apidog, Postman, and Swagger UI.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "EquiliLearn Support"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter your JWT token in the format: Bearer <token>"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Invalid email or password"
+          }
+        },
+        "example": {
+          "error": "Invalid email or password"
+        }
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Validation failed"
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "email": "email must be a valid email address",
+              "password": "password must be at least 8 characters long"
+            }
+          }
+        },
+        "example": {
+          "error": "Validation failed",
+          "errors": {
+            "email": "email must be a valid email address",
+            "password": "password must be at least 8 characters long"
+          }
+        }
+      },
+      "SuccessMessageResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Operation completed successfully"
+          }
+        },
+        "example": {
+          "message": "Operation completed successfully"
+        }
+      },
+      "UserRegisterRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password",
+          "confirm_password"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Alice Johnson"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "example": "Password123!"
+          },
+          "confirm_password": {
+            "type": "string",
+            "format": "password",
+            "example": "Password123!"
+          }
+        },
+        "example": {
+          "name": "Alice Johnson",
+          "email": "alice@example.com",
+          "password": "Password123!",
+          "confirm_password": "Password123!"
+        }
+      },
+      "UserLoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "Password123!"
+          }
+        },
+        "example": {
+          "email": "alice@example.com",
+          "password": "Password123!"
+        }
+      },
+      "UserLoginResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYTAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwicm9sZSI6InVzZXIiLCJleHAiOjE3ODg4MDAwMDB9.k5jJ_dKx7T9bLmPqRsTvWz"
+          }
+        },
+        "example": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYTAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwicm9sZSI6InVzZXIiLCJleHAiOjE3ODg4MDAwMDB9.k5jJ_dKx7T9bLmPqRsTvWz"
+        }
+      },
+      "ForgotPasswordRequest": {
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          }
+        },
+        "example": {
+          "email": "alice@example.com"
+        }
+      },
+      "ResetPasswordRequest": {
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "e4d909c290d0fb1ca068ffaddf22cbd0"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "example": "NewPassword123!"
+          }
+        },
+        "example": {
+          "token": "e4d909c290d0fb1ca068ffaddf22cbd0",
+          "password": "NewPassword123!"
+        }
+      },
+      "UserSearchItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a0000000-0000-0000-0000-000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Alice Johnson"
+          },
+          "email": {
+            "type": "string",
+            "example": "alice@example.com"
+          }
+        },
+        "example": {
+          "id": "a0000000-0000-0000-0000-000000000001",
+          "name": "Alice Johnson",
+          "email": "alice@example.com"
+        }
+      },
+      "CreateGroupRequest": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "EquiliLearn Study Group"
+          },
+          "description": {
+            "type": "string",
+            "example": "Collaborative group for sharing lecture summaries and study materials."
+          },
+          "member_emails": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "example": [
+              "bob@example.com",
+              "charlie@example.com"
+            ]
+          },
+          "member_user_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": []
+          }
+        },
+        "example": {
+          "name": "EquiliLearn Study Group",
+          "description": "Collaborative group for sharing lecture summaries and study materials.",
+          "member_emails": [
+            "bob@example.com",
+            "charlie@example.com"
+          ],
+          "member_user_ids": []
+        }
+      },
+      "AddGroupMemberRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "charlie@example.com"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a0000000-0000-0000-0000-000000000003"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "member"
+            ],
+            "example": "member"
+          }
+        },
+        "example": {
+          "email": "charlie@example.com",
+          "role": "member"
+        }
+      },
+      "GroupMember": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "m0000000-0000-0000-0000-000000000001"
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b0000000-0000-0000-0000-000000000001"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a0000000-0000-0000-0000-000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Alice Johnson"
+          },
+          "email": {
+            "type": "string",
+            "example": "alice@example.com"
+          },
+          "role": {
+            "type": "string",
+            "example": "admin"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-06T23:30:00Z"
+          }
+        },
+        "example": {
+          "id": "m0000000-0000-0000-0000-000000000001",
+          "group_id": "b0000000-0000-0000-0000-000000000001",
+          "user_id": "a0000000-0000-0000-0000-000000000001",
+          "name": "Alice Johnson",
+          "email": "alice@example.com",
+          "role": "admin",
+          "joined_at": "2026-09-06T23:30:00Z"
+        }
+      },
+      "GroupMessage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "msg-0000000-0000-0000-0000-000000000001"
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b0000000-0000-0000-0000-000000000001"
+          },
+          "sender_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a0000000-0000-0000-0000-000000000001"
+          },
+          "sender_name": {
+            "type": "string",
+            "example": "Alice Johnson"
+          },
+          "sender_email": {
+            "type": "string",
+            "example": "alice@example.com"
+          },
+          "content": {
+            "type": "string",
+            "example": "Hello everyone! Welcome to our study room."
+          },
+          "message_type": {
+            "type": "string",
+            "example": "text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-06T23:30:00Z"
+          }
+        },
+        "example": {
+          "id": "msg-0000000-0000-0000-0000-000000000001",
+          "group_id": "b0000000-0000-0000-0000-000000000001",
+          "sender_id": "a0000000-0000-0000-0000-000000000001",
+          "sender_name": "Alice Johnson",
+          "sender_email": "alice@example.com",
+          "content": "Hello everyone! Welcome to our study room.",
+          "message_type": "text",
+          "created_at": "2026-09-06T23:30:00Z"
+        }
+      },
+      "GroupSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b0000000-0000-0000-0000-000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "EquiliLearn Study Group"
+          },
+          "description": {
+            "type": "string",
+            "example": "Collaborative study room for members"
+          },
+          "created_by_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a0000000-0000-0000-0000-000000000001"
+          },
+          "created_by_name": {
+            "type": "string",
+            "example": "Alice Johnson"
+          },
+          "member_count": {
+            "type": "integer",
+            "example": 3
+          },
+          "user_role": {
+            "type": "string",
+            "example": "admin"
+          },
+          "last_message": {
+            "$ref": "#/components/schemas/GroupMessage"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-06T23:30:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-06T23:30:00Z"
+          }
+        }
+      },
+      "GroupDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "b0000000-0000-0000-0000-000000000001"
+          },
+          "name": {
+            "type": "string",
+            "example": "EquiliLearn Study Group"
+          },
+          "description": {
+            "type": "string",
+            "example": "Collaborative study room for members"
+          },
+          "created_by_id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "a0000000-0000-0000-0000-000000000001"
+          },
+          "created_by_name": {
+            "type": "string",
+            "example": "Alice Johnson"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroupMember"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-06T23:30:00Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-06T23:30:00Z"
+          }
+        }
+      },
+      "SummarizeTextRequest": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Operating Systems Lecture 4"
+          },
+          "text": {
+            "type": "string",
+            "example": "Virtual memory is a memory management capability of an operating system that uses hardware and software to allow a computer to compensate for physical memory shortages."
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "id",
+              "en"
+            ],
+            "example": "en"
+          },
+          "detail_level": {
+            "type": "string",
+            "enum": [
+              "brief",
+              "balanced",
+              "detailed"
+            ],
+            "example": "balanced"
+          },
+          "target_audience": {
+            "type": "string",
+            "enum": [
+              "student",
+              "beginner",
+              "professional",
+              "general"
+            ],
+            "example": "student"
+          },
+          "save_to_history": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "example": {
+          "title": "Operating Systems Lecture 4",
+          "text": "Virtual memory is a memory management capability of an operating system that uses hardware and software to allow a computer to compensate for physical memory shortages.",
+          "language": "en",
+          "detail_level": "balanced",
+          "target_audience": "student",
+          "save_to_history": true
+        }
+      },
+      "DocumentSummaryResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "d0000000-0000-0000-0000-000000000001"
+          },
+          "file_name": {
+            "type": "string",
+            "example": "lecture_slides.pptx"
+          },
+          "file_type": {
+            "type": "string",
+            "example": ".pptx"
+          },
+          "file_size": {
+            "type": "integer",
+            "example": 204800
+          },
+          "title": {
+            "type": "string",
+            "example": "Machine Learning Overview"
+          },
+          "summary": {
+            "type": "string",
+            "example": "Introduction to supervised and unsupervised learning algorithms with key concepts."
+          },
+          "key_points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "Gradient descent optimization",
+              "Loss formulation",
+              "Evaluation metrics"
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "example": "Comprehensive breakdown designed for students explaining the foundational concepts."
+          },
+          "language": {
+            "type": "string",
+            "example": "en"
+          },
+          "detail_level": {
+            "type": "string",
+            "example": "balanced"
+          },
+          "target_audience": {
+            "type": "string",
+            "example": "student"
+          },
+          "slide_count": {
+            "type": "integer",
+            "example": 15
+          },
+          "model": {
+            "type": "string",
+            "example": "gemini-3.7-flash"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-09-06T23:30:00Z"
+          }
+        },
+        "example": {
+          "id": "d0000000-0000-0000-0000-000000000001",
+          "file_name": "lecture_slides.pptx",
+          "file_type": ".pptx",
+          "file_size": 204800,
+          "title": "Machine Learning Overview",
+          "summary": "Introduction to supervised and unsupervised learning algorithms with key concepts.",
+          "key_points": [
+            "Gradient descent optimization",
+            "Loss formulation",
+            "Evaluation metrics"
+          ],
+          "explanation": "Comprehensive breakdown designed for students explaining the foundational concepts.",
+          "language": "en",
+          "detail_level": "balanced",
+          "target_audience": "student",
+          "slide_count": 15,
+          "model": "gemini-3.7-flash",
+          "created_at": "2026-09-06T23:30:00Z"
+        }
+      },
+      "SynthesizeSpeechRequest": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "Hello! Welcome to EquiliLearn accessibility features."
+          },
+          "voice": {
+            "type": "string",
+            "example": "aura-asteria-en"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "mp3",
+              "wav",
+              "opus"
+            ],
+            "example": "mp3"
+          },
+          "sample_rate": {
+            "type": "integer",
+            "example": 24000
+          }
+        },
+        "example": {
+          "text": "Hello! Welcome to EquiliLearn accessibility features.",
+          "voice": "aura-asteria-en",
+          "format": "mp3",
+          "sample_rate": 24000
+        }
+      },
+      "TTSVoiceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "aura-asteria-en"
+          },
+          "name": {
+            "type": "string",
+            "example": "Asteria"
+          },
+          "gender": {
+            "type": "string",
+            "example": "female"
+          },
+          "language": {
+            "type": "string",
+            "example": "en-US"
+          },
+          "description": {
+            "type": "string",
+            "example": "Warm and conversational English voice"
+          },
+          "sample_rate": {
+            "type": "integer",
+            "example": 24000
+          }
+        },
+        "example": {
+          "id": "aura-asteria-en",
+          "name": "Asteria",
+          "gender": "female",
+          "language": "en-US",
+          "description": "Warm and conversational English voice",
+          "sample_rate": 24000
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register a new user",
+        "description": "Creates a new user account with email and password.",
+        "requestBody": {
+          "description": "Registration payload",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegisterRequest"
+              },
+              "example": {
+                "name": "Jane Doe",
+                "email": "jane@example.com",
+                "password": "Password123!",
+                "confirm_password": "Password123!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessMessageResponse"
+                },
+                "example": {
+                  "message": "user registered successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                },
+                "example": {
+                  "error": "Validation failed",
+                  "errors": {
+                    "email": "email must be a valid email address",
+                    "password": "password must be at least 8 characters long"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "registerUser"
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login user",
+        "description": "Authenticates user credentials and returns a JWT Bearer token.",
+        "requestBody": {
+          "description": "Login payload",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLoginRequest"
+              },
+              "example": {
+                "email": "alice@example.com",
+                "password": "Password123!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLoginResponse"
+                },
+                "example": {
+                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYTAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwicm9sZSI6InVzZXIiLCJleHAiOjE3ODg4MDAwMDB9.k5jJ_dKx7T9bLmPqRsTvWz"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid email or password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Invalid email or password"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "loginUser"
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Request password reset",
+        "description": "Generates a password reset token and sends an email to the user.",
+        "requestBody": {
+          "description": "Registered account email",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              },
+              "example": {
+                "email": "alice@example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset instructions sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessMessageResponse"
+                },
+                "example": {
+                  "message": "If email is registered, a reset link will be sent"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "forgotPassword"
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Reset password",
+        "description": "Resets the password using token received from email.",
+        "requestBody": {
+          "description": "Reset token and new password",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordRequest"
+              },
+              "example": {
+                "token": "e4d909c290d0fb1ca068ffaddf22cbd0",
+                "password": "NewSecurePassword123!"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessMessageResponse"
+                },
+                "example": {
+                  "message": "password changed successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid token or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Invalid or expired reset token"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "resetPassword"
+      }
+    },
+    "/api/v1/auth/google/login": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Initiate Google OAuth2 Login",
+        "description": "Redirects client to Google OAuth sign-in screen.",
+        "responses": {
+          "307": {
+            "description": "Redirect to Google OAuth"
+          }
+        },
+        "operationId": "googleOAuthLogin"
+      }
+    },
+    "/api/v1/auth/google/callback": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Google OAuth2 Callback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "4/0AdQt8q..."
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "state123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JWT Token generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLoginResponse"
+                },
+                "example": {
+                  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYTAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwicm9sZSI6InVzZXIiLCJleHAiOjE3ODg4MDAwMDB9.k5jJ_dKx7T9bLmPqRsTvWz"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "googleOAuthCallback"
+      }
+    },
+    "/api/v1/users/search": {
+      "get": {
+        "tags": [
+          "User Discovery"
+        ],
+        "summary": "Search registered users",
+        "description": "Search users by email or name keyword to add them to study groups.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "Search query",
+            "schema": {
+              "type": "string"
+            },
+            "example": "bob"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max results",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "example": 10
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching users list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserSearchItem"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "data": [
+                    {
+                      "id": "a0000000-0000-0000-0000-000000000002",
+                      "name": "Bob Smith",
+                      "email": "bob@example.com"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Authentication required"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "searchUsers"
+      }
+    },
+    "/api/v1/groups": {
+      "get": {
+        "tags": [
+          "Group Chat"
+        ],
+        "summary": "List user chat groups",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GroupSummary"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "data": [
+                    {
+                      "id": "b0000000-0000-0000-0000-000000000001",
+                      "name": "EquiliLearn Study Group",
+                      "description": "Collaborative study room for members",
+                      "created_by_id": "a0000000-0000-0000-0000-000000000001",
+                      "created_by_name": "Alice Johnson",
+                      "member_count": 3,
+                      "user_role": "admin",
+                      "last_message": {
+                        "id": "msg-0000000-0000-0000-0000-000000000001",
+                        "group_id": "b0000000-0000-0000-0000-000000000001",
+                        "sender_id": "a0000000-0000-0000-0000-000000000002",
+                        "sender_name": "Bob Smith",
+                        "sender_email": "bob@example.com",
+                        "content": "Hey Alice! Glad to be here.",
+                        "message_type": "text",
+                        "created_at": "2026-09-06T23:25:00Z"
+                      },
+                      "created_at": "2026-09-06T23:20:00Z",
+                      "updated_at": "2026-09-06T23:20:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "operationId": "listGroups"
+      },
+      "post": {
+        "tags": [
+          "Group Chat"
+        ],
+        "summary": "Create a new chat group",
+        "description": "Creates a study group and invites specified members.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "Group creation parameters",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateGroupRequest"
+              },
+              "example": {
+                "name": "Data Structures & Algorithms",
+                "description": "Weekly study sessions and problem discussions",
+                "member_emails": [
+                  "bob@example.com",
+                  "charlie@example.com"
+                ],
+                "member_user_ids": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Group created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Group created successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GroupDetail"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Group created successfully",
+                  "data": {
+                    "id": "c1111111-1111-1111-1111-111111111111",
+                    "name": "Data Structures & Algorithms",
+                    "description": "Weekly study sessions and problem discussions",
+                    "created_by_id": "a0000000-0000-0000-0000-000000000001",
+                    "created_by_name": "Alice Johnson",
+                    "members": [
+                      {
+                        "id": "m1111111-1111-1111-1111-111111111111",
+                        "group_id": "c1111111-1111-1111-1111-111111111111",
+                        "user_id": "a0000000-0000-0000-0000-000000000001",
+                        "name": "Alice Johnson",
+                        "email": "alice@example.com",
+                        "role": "admin",
+                        "joined_at": "2026-09-06T23:30:00Z"
+                      }
+                    ],
+                    "created_at": "2026-09-06T23:30:00Z",
+                    "updated_at": "2026-09-06T23:30:00Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          }
+        },
+        "operationId": "createGroup"
+      }
+    },
+    "/api/v1/groups/{id}": {
+      "get": {
+        "tags": [
+          "Group Chat"
+        ],
+        "summary": "Get group details",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "b0000000-0000-0000-0000-000000000001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/GroupDetail"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Group not found"
+          }
+        },
+        "operationId": "getGroupById"
+      }
+    },
+    "/api/v1/groups/{id}/members": {
+      "post": {
+        "tags": [
+          "Group Chat"
+        ],
+        "summary": "Add member to group",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "b0000000-0000-0000-0000-000000000001"
+          }
+        ],
+        "requestBody": {
+          "description": "Member identification (email or user_id)",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddGroupMemberRequest"
+              },
+              "example": {
+                "email": "charlie@example.com",
+                "role": "member"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Member added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Member added successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GroupMember"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Member added successfully",
+                  "data": {
+                    "id": "m3333333-3333-3333-3333-333333333333",
+                    "group_id": "b0000000-0000-0000-0000-000000000001",
+                    "user_id": "a0000000-0000-0000-0000-000000000003",
+                    "name": "Charlie Davis",
+                    "email": "charlie@example.com",
+                    "role": "member",
+                    "joined_at": "2026-09-06T23:31:00Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "addGroupMember"
+      }
+    },
+    "/api/v1/groups/{id}/members/{userId}": {
+      "delete": {
+        "tags": [
+          "Group Chat"
+        ],
+        "summary": "Remove member from group",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "b0000000-0000-0000-0000-000000000001"
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "a0000000-0000-0000-0000-000000000003"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Member removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessMessageResponse"
+                },
+                "example": {
+                  "message": "Member removed successfully"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "removeGroupMember"
+      }
+    },
+    "/api/v1/groups/{id}/messages": {
+      "get": {
+        "tags": [
+          "Group Chat"
+        ],
+        "summary": "Get group message history",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "b0000000-0000-0000-0000-000000000001"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "example": 50
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "example": 0
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Messages list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/GroupMessage"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "data": [
+                    {
+                      "id": "msg-0000000-0000-0000-0000-000000000001",
+                      "group_id": "b0000000-0000-0000-0000-000000000001",
+                      "sender_id": "a0000000-0000-0000-0000-000000000001",
+                      "sender_name": "Alice Johnson",
+                      "sender_email": "alice@example.com",
+                      "content": "Hello everyone! Welcome to the EquiliLearn Study Group",
+                      "message_type": "text",
+                      "created_at": "2026-09-06T23:20:00Z"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getGroupMessages"
+      }
+    },
+    "/api/v1/documents/summarize": {
+      "post": {
+        "tags": [
+          "AI Document Summarizer"
+        ],
+        "summary": "Upload and summarize document / slides",
+        "description": "Uploads presentation (.pptx, .ppt), PDF (.pdf), or text document and generates an AI summary with key takeaways via Google Gemini.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "Document file and summarization configuration",
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Presentation or document (.pptx, .pdf, .txt)"
+                  },
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "id",
+                      "en"
+                    ],
+                    "default": "en",
+                    "example": "en"
+                  },
+                  "detail_level": {
+                    "type": "string",
+                    "enum": [
+                      "brief",
+                      "balanced",
+                      "detailed"
+                    ],
+                    "default": "balanced",
+                    "example": "balanced"
+                  },
+                  "target_audience": {
+                    "type": "string",
+                    "enum": [
+                      "student",
+                      "beginner",
+                      "professional",
+                      "general"
+                    ],
+                    "default": "student",
+                    "example": "student"
+                  },
+                  "save_to_history": {
+                    "type": "boolean",
+                    "default": true,
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Document summarized successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Document summarized successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DocumentSummaryResponse"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Document summarized successfully",
+                  "data": {
+                    "id": "d0000000-0000-0000-0000-000000000001",
+                    "file_name": "presentation.pptx",
+                    "file_type": ".pptx",
+                    "file_size": 245120,
+                    "title": "Machine Learning Fundamentals",
+                    "summary": "This presentation introduces core supervised learning paradigms.",
+                    "key_points": [
+                      "Supervised vs Unsupervised learning differences",
+                      "Gradient Descent optimization mechanics",
+                      "Evaluation metrics: Precision, Recall, and F1 Score"
+                    ],
+                    "explanation": "Comprehensive explanation tailored for students breaking down each slide with intuitive analogies.",
+                    "language": "en",
+                    "detail_level": "detailed",
+                    "target_audience": "student",
+                    "slide_count": 18,
+                    "model": "gemini-3.7-flash",
+                    "created_at": "2026-09-06T23:32:00Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid file format or validation error"
+          }
+        },
+        "operationId": "summarizeDocument"
+      }
+    },
+    "/api/v1/documents/summarize-text": {
+      "post": {
+        "tags": [
+          "AI Document Summarizer"
+        ],
+        "summary": "Summarize raw text or notes",
+        "description": "Generates structured summary from raw pasted text or lecture notes.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "Text payload and summarization options",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummarizeTextRequest"
+              },
+              "example": {
+                "title": "Operating Systems Lecture 4",
+                "text": "Virtual memory is a memory management capability of an operating system that uses hardware and software to allow a computer to compensate for physical memory shortages.",
+                "language": "en",
+                "detail_level": "balanced",
+                "target_audience": "student",
+                "save_to_history": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Text summarized successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Text summarized successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DocumentSummaryResponse"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "summarizeText"
+      }
+    },
+    "/api/v1/documents/history": {
+      "get": {
+        "tags": [
+          "AI Document Summarizer"
+        ],
+        "summary": "Get document summarization history",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "example": 10
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Summary history list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DocumentSummaryResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDocumentHistory"
+      }
+    },
+    "/api/v1/documents/{id}": {
+      "get": {
+        "tags": [
+          "AI Document Summarizer"
+        ],
+        "summary": "Get document summary by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "d0000000-0000-0000-0000-000000000001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Summary details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DocumentSummaryResponse"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getDocumentById"
+      },
+      "delete": {
+        "tags": [
+          "AI Document Summarizer"
+        ],
+        "summary": "Delete document summary",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "d0000000-0000-0000-0000-000000000001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Summary deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessMessageResponse"
+                },
+                "example": {
+                  "message": "Document summary deleted successfully"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteDocument"
+      }
+    },
+    "/api/v1/speech/synthesize": {
+      "post": {
+        "tags": [
+          "Speech & Audio"
+        ],
+        "summary": "Convert text to speech (TTS)",
+        "description": "Generates high quality spoken audio from text using Deepgram Aura.",
+        "requestBody": {
+          "description": "Speech synthesis options",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SynthesizeSpeechRequest"
+              },
+              "example": {
+                "text": "Welcome to EquiliLearn, your accessible learning companion.",
+                "voice": "aura-asteria-en",
+                "format": "mp3",
+                "sample_rate": 24000
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Binary audio stream (or JSON base64 if Accept: application/json requested)",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "synthesizeSpeech"
+      }
+    },
+    "/api/v1/speech/text-to-speech": {
+      "post": {
+        "tags": [
+          "Speech & Audio"
+        ],
+        "summary": "Convert text to speech (Alias)",
+        "description": "Alias endpoint for /api/v1/speech/synthesize.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SynthesizeSpeechRequest"
+              },
+              "example": {
+                "text": "Welcome to EquiliLearn, your accessible learning companion.",
+                "voice": "aura-asteria-en",
+                "format": "mp3",
+                "sample_rate": 24000
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Binary audio stream",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "textToSpeechAlias"
+      }
+    },
+    "/api/v1/speech/voices": {
+      "get": {
+        "tags": [
+          "Speech & Audio"
+        ],
+        "summary": "List available TTS voices",
+        "responses": {
+          "200": {
+            "description": "Voice models list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TTSVoiceItem"
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "data": [
+                    {
+                      "id": "aura-asteria-en",
+                      "name": "Asteria",
+                      "gender": "female",
+                      "language": "en-US",
+                      "description": "Warm and conversational English voice",
+                      "sample_rate": 24000
+                    },
+                    {
+                      "id": "aura-luna-en",
+                      "name": "Luna",
+                      "gender": "female",
+                      "language": "en-US",
+                      "description": "Crisp and clear English voice",
+                      "sample_rate": 24000
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listTTSVoices"
+      }
+    },
+    "/api/v1/speech/history": {
+      "get": {
+        "tags": [
+          "Speech & Audio"
+        ],
+        "summary": "Get STT transcription history",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "example": 1
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "example": 10
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transcription records list"
+          }
+        },
+        "operationId": "getSpeechHistory"
+      }
+    },
+    "/api/v1/speech/history/{id}": {
+      "delete": {
+        "tags": [
+          "Speech & Audio"
+        ],
+        "summary": "Delete transcription record",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "s0000000-0000-0000-0000-000000000001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record deleted"
+          }
+        },
+        "operationId": "deleteSpeechHistoryRecord"
+      }
+    },
+    "/api/v1/ws/chat": {
+      "get": {
+        "tags": [
+          "WebSockets"
+        ],
+        "summary": "Real-Time Group Chat WebSocket",
+        "description": "WebSocket endpoint for real-time messaging, typing events, and group sync. Connect with ws://localhost:8080/api/v1/ws/chat?token=<JWT_TOKEN>.",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "description": "JWT authentication token",
+            "schema": {
+              "type": "string"
+            },
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching Protocols to WebSocket"
+          }
+        },
+        "operationId": "wsGroupChat"
+      }
+    },
+    "/api/v1/ws/speech-to-text": {
+      "get": {
+        "tags": [
+          "WebSockets"
+        ],
+        "summary": "Real-Time Speech-to-Text WebSocket",
+        "description": "WebSocket endpoint for streaming microphone audio and receiving live transcription. Connect with ws://localhost:8080/api/v1/ws/speech-to-text?token=<JWT_TOKEN>.",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "description": "JWT authentication token (optional)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "Switching Protocols to WebSocket"
+          }
+        },
+        "operationId": "wsSpeechToText"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User registration, login, password recovery, and Google OAuth2 authentication."
+    },
+    {
+      "name": "User Discovery",
+      "description": "Search for registered users to invite them into study groups."
+    },
+    {
+      "name": "Group Chat",
+      "description": "Create and manage study groups, members, and message history."
+    },
+    {
+      "name": "AI Document Summarizer",
+      "description": "Upload documents/slides or raw text and generate AI-powered summaries via Google Gemini."
+    },
+    {
+      "name": "Speech & Audio",
+      "description": "Text-to-speech synthesis, available voices, and speech transcription history."
+    },
+    {
+      "name": "WebSockets",
+      "description": "Real-time WebSocket endpoints for group chat and streaming speech-to-text."
+    }
+  ]
+}
