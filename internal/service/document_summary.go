@@ -21,6 +21,7 @@ type IDocumentSummaryService interface {
 	SummarizeText(ctx context.Context, req model.SummarizeTextRequest, userID *uuid.UUID) (*model.DocumentSummaryResponse, error)
 	GetSummariesByUserID(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]model.DocumentSummaryListItem, int64, error)
 	GetSummaryByID(ctx context.Context, id uuid.UUID) (*model.DocumentSummaryResponse, error)
+	UpdateSummary(ctx context.Context, id uuid.UUID, userID uuid.UUID, req model.UpdateDocumentSummaryRequest) (*model.DocumentSummaryResponse, error)
 	DeleteSummary(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
 
@@ -266,6 +267,72 @@ func (s *DocumentSummaryService) GetSummaryByID(ctx context.Context, id uuid.UUI
 	}
 	if summaryEntity == nil {
 		return nil, nil
+	}
+
+	var keyPoints []string
+	if summaryEntity.KeyPoints != "" {
+		_ = json.Unmarshal([]byte(summaryEntity.KeyPoints), &keyPoints)
+	}
+
+	return &model.DocumentSummaryResponse{
+		ID:             summaryEntity.ID,
+		UserID:         summaryEntity.UserID,
+		FileName:       summaryEntity.FileName,
+		FileType:       summaryEntity.FileType,
+		FileSize:       summaryEntity.FileSize,
+		Title:          summaryEntity.Title,
+		Summary:        summaryEntity.Summary,
+		KeyPoints:      keyPoints,
+		Explanation:    summaryEntity.Explanation,
+		Language:       summaryEntity.Language,
+		DetailLevel:    summaryEntity.DetailLevel,
+		TargetAudience: summaryEntity.TargetAudience,
+		TokenCount:     summaryEntity.TokenCount,
+		CreatedAt:      summaryEntity.CreatedAt,
+	}, nil
+}
+
+func (s *DocumentSummaryService) UpdateSummary(ctx context.Context, id uuid.UUID, userID uuid.UUID, req model.UpdateDocumentSummaryRequest) (*model.DocumentSummaryResponse, error) {
+	summaryEntity, err := s.repo.GetSummaryByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if summaryEntity == nil {
+		return nil, fmt.Errorf("document summary not found")
+	}
+
+	// Verify ownership
+	if summaryEntity.UserID == nil || *summaryEntity.UserID != userID {
+		return nil, fmt.Errorf("unauthorized to update this document summary")
+	}
+
+	if req.Title != nil {
+		summaryEntity.Title = strings.TrimSpace(*req.Title)
+	}
+	if req.Summary != nil {
+		summaryEntity.Summary = strings.TrimSpace(*req.Summary)
+	}
+	if req.KeyPoints != nil {
+		keyPointsJSON, _ := json.Marshal(*req.KeyPoints)
+		summaryEntity.KeyPoints = string(keyPointsJSON)
+	}
+	if req.Explanation != nil {
+		summaryEntity.Explanation = strings.TrimSpace(*req.Explanation)
+	}
+	if req.Language != nil {
+		summaryEntity.Language = strings.TrimSpace(*req.Language)
+	}
+	if req.DetailLevel != nil {
+		summaryEntity.DetailLevel = strings.TrimSpace(*req.DetailLevel)
+	}
+	if req.TargetAudience != nil {
+		summaryEntity.TargetAudience = strings.TrimSpace(*req.TargetAudience)
+	}
+
+	summaryEntity.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateDocumentSummary(ctx, summaryEntity); err != nil {
+		return nil, fmt.Errorf("failed to update document summary: %w", err)
 	}
 
 	var keyPoints []string

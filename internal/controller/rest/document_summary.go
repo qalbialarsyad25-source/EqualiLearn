@@ -196,6 +196,54 @@ func (r *V1) DeleteDocumentSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Document summary deleted successfully"})
 }
 
+// UpdateDocumentSummary allows updating an existing summary (title, summary, key_points, explanation)
+func (r *V1) UpdateDocumentSummary(c *gin.Context) {
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	userId, ok := userIdVal.(uuid.UUID)
+	if !ok {
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		RespondError(c, http.StatusBadRequest, "Invalid document summary ID format")
+		return
+	}
+
+	var req model.UpdateDocumentSummaryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		RespondValidationError(c, err)
+		return
+	}
+
+	ctx := c.Request.Context()
+	updated, err := r.service.DocumentSummaryService.UpdateSummary(ctx, id, userId, req)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) || strings.Contains(err.Error(), "not found") {
+			RespondError(c, http.StatusNotFound, "Document summary not found")
+			return
+		}
+		if strings.Contains(err.Error(), "unauthorized") {
+			RespondError(c, http.StatusForbidden, "Unauthorized to update this document summary")
+			return
+		}
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to update document summary: %v", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Document summary updated successfully",
+		"data":    updated,
+	})
+}
+
 // Helper to extract optional authenticated user ID from context or header
 func (r *V1) getOptionalUserID(c *gin.Context) *uuid.UUID {
 	userIdVal, exists := c.Get("userId")

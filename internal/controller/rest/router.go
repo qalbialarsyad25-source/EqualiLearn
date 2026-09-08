@@ -56,6 +56,8 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 			documents.POST("/summarize-text", v1.SummarizeText)
 			documents.GET("/history", v1.Authentication, v1.GetDocumentSummaries)
 			documents.GET("/:id", v1.GetDocumentSummaryByID)
+			documents.PUT("/:id", v1.Authentication, v1.UpdateDocumentSummary)
+			documents.PATCH("/:id", v1.Authentication, v1.UpdateDocumentSummary)
 			documents.DELETE("/:id", v1.Authentication, v1.DeleteDocumentSummary)
 		}
 

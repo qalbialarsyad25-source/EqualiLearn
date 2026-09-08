@@ -188,6 +188,17 @@ func (m *mockSummaryRepo) CreateDocumentSummary(ctx context.Context, s *entity.D
 	return nil
 }
 
+func (m *mockSummaryRepo) UpdateDocumentSummary(ctx context.Context, s *entity.DocumentSummary) error {
+	for i, it := range m.summaries {
+		if it.ID == s.ID {
+			m.summaries[i] = *s
+			return nil
+		}
+	}
+	m.summaries = append(m.summaries, *s)
+	return nil
+}
+
 func (m *mockSummaryRepo) GetSummariesByUserID(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]entity.DocumentSummary, int64, error) {
 	var res []entity.DocumentSummary
 	for _, s := range m.summaries {

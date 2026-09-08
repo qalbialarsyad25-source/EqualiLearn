@@ -13,6 +13,7 @@ import (
 
 type IDocumentSummaryRepository interface {
 	CreateDocumentSummary(ctx context.Context, summary *entity.DocumentSummary) error
+	UpdateDocumentSummary(ctx context.Context, summary *entity.DocumentSummary) error
 	GetSummariesByUserID(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]entity.DocumentSummary, int64, error)
 	GetSummaryByID(ctx context.Context, id uuid.UUID) (*entity.DocumentSummary, error)
 	DeleteSummary(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
@@ -28,6 +29,10 @@ func NewDocumentSummaryRepository(db *gorm.DB) *DocumentSummaryRepository {
 
 func (r *DocumentSummaryRepository) CreateDocumentSummary(ctx context.Context, summary *entity.DocumentSummary) error {
 	return r.db.WithContext(ctx).Create(summary).Error
+}
+
+func (r *DocumentSummaryRepository) UpdateDocumentSummary(ctx context.Context, summary *entity.DocumentSummary) error {
+	return r.db.WithContext(ctx).Save(summary).Error
 }
 
 func (r *DocumentSummaryRepository) GetSummariesByUserID(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]entity.DocumentSummary, int64, error) {

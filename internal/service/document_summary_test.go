@@ -20,6 +20,17 @@ func (m *mockDocumentSummaryRepo) CreateDocumentSummary(ctx context.Context, sum
 	return nil
 }
 
+func (m *mockDocumentSummaryRepo) UpdateDocumentSummary(ctx context.Context, summary *entity.DocumentSummary) error {
+	for i, s := range m.summaries {
+		if s.ID == summary.ID {
+			m.summaries[i] = *summary
+			return nil
+		}
+	}
+	m.summaries = append(m.summaries, *summary)
+	return nil
+}
+
 func (m *mockDocumentSummaryRepo) GetSummariesByUserID(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]entity.DocumentSummary, int64, error) {
 	var results []entity.DocumentSummary
 	for _, s := range m.summaries {
@@ -123,6 +134,60 @@ func TestDocumentSummaryService_SummarizeText(t *testing.T) {
 
 	if res.Summary == "" {
 		t.Error("expected non-empty summary")
+	}
+}
+
+func TestDocumentSummaryService_UpdateSummary(t *testing.T) {
+	mockClient := gemini.NewMockGeminiClient()
+	repo := &mockDocumentSummaryRepo{}
+	svc := NewDocumentSummaryService(mockClient, repo)
+
+	ctx := context.Background()
+	userID := uuid.New()
+
+	created, err := svc.SummarizeText(ctx, model.SummarizeTextRequest{
+		Title: "Initial Title",
+		Text:  "Original content text to summarize.",
+	}, &userID)
+	if err != nil {
+		t.Fatalf("failed to create initial summary: %v", err)
+	}
+
+	newTitle := "Updated Advanced Physics Title"
+	newSummary := "Edited summary text with customized key insights."
+	newKeyPoints := []string{"Key point 1 updated", "Key point 2 updated"}
+	newExplanation := "Custom user explanation notes."
+
+	updateReq := model.UpdateDocumentSummaryRequest{
+		Title:       &newTitle,
+		Summary:     &newSummary,
+		KeyPoints:   &newKeyPoints,
+		Explanation: &newExplanation,
+	}
+
+	updated, err := svc.UpdateSummary(ctx, created.ID, userID, updateReq)
+	if err != nil {
+		t.Fatalf("failed to update summary: %v", err)
+	}
+
+	if updated.Title != newTitle {
+		t.Errorf("expected title %q, got %q", newTitle, updated.Title)
+	}
+	if updated.Summary != newSummary {
+		t.Errorf("expected summary %q, got %q", newSummary, updated.Summary)
+	}
+	if len(updated.KeyPoints) != 2 || updated.KeyPoints[0] != "Key point 1 updated" {
+		t.Errorf("expected updated key points, got %+v", updated.KeyPoints)
+	}
+	if updated.Explanation != newExplanation {
+		t.Errorf("expected explanation %q, got %q", newExplanation, updated.Explanation)
+	}
+
+	// Test unauthorized update
+	otherUserID := uuid.New()
+	_, err = svc.UpdateSummary(ctx, created.ID, otherUserID, updateReq)
+	if err == nil {
+		t.Fatal("expected error on unauthorized user update")
 	}
 }
 

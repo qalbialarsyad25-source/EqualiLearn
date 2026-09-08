@@ -57,3 +57,15 @@ type DocumentSummaryListItem struct {
 	Language       string     `json:"language"`
 	CreatedAt      time.Time  `json:"created_at"`
 }
+
+// UpdateDocumentSummaryRequest represents client payload to update an existing summary's title, summary, key points, explanation, etc.
+type UpdateDocumentSummaryRequest struct {
+	Title          *string   `json:"title"`
+	Summary        *string   `json:"summary"`
+	KeyPoints      *[]string `json:"key_points"`
+	Explanation    *string   `json:"explanation"`
+	Language       *string   `json:"language"`
+	DetailLevel    *string   `json:"detail_level"`
+	TargetAudience *string   `json:"target_audience"`
+}
+
