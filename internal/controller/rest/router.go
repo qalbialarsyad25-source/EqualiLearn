@@ -14,6 +14,7 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 		{
 			auth.POST("/register", v1.Register)
 			auth.POST("/login", v1.Login)
+			auth.POST("/logout", v1.Authentication, v1.Logout)
 			auth.GET("/google/login", v1.LoginGoogle)
 			auth.GET("/google/callback", v1.CallbackGoogle)
 			auth.POST("/forgot-password", v1.ForgotPassword)

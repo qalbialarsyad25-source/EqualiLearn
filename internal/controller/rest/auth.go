@@ -108,6 +108,12 @@ func (r *V1) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
+// Logout handles user logout by acknowledging the request.
+// JWT is stateless — the client must discard the stored token upon receiving success.
+func (r *V1) Logout(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "logged out successfully"})
+}
+
 func (p *V1) LoginGoogle(c *gin.Context) {
 	state := oauth.GenerateRandomState()
 
