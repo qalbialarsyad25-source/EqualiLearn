@@ -254,3 +254,27 @@ func (r *V1) getOptionalUserID(c *gin.Context) *uuid.UUID {
 	}
 	return nil
 }
+
+// ExportDocumentSummaryByID exports a stored document summary to PDF, TXT, or MD
+func (r *V1) ExportDocumentSummaryByID(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		RespondError(c, http.StatusBadRequest, "Invalid document summary ID format")
+		return
+	}
+
+	format := c.DefaultQuery("format", "pdf")
+	ctx := c.Request.Context()
+
+	result, err := r.service.DocumentSummaryService.ExportSummary(ctx, id, format)
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to export document summary: %v", err))
+		return
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", result.Filename))
+	c.Header("Content-Type", result.ContentType)
+	c.Header("Content-Length", strconv.Itoa(len(result.Data)))
+	c.Data(http.StatusOK, result.ContentType, result.Data)
+}

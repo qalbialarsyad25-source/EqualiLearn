@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -9,6 +10,8 @@ import (
 	"EquiliLearn/internal/entity"
 	"EquiliLearn/internal/model"
 	"EquiliLearn/internal/repository"
+	"EquiliLearn/pkg/export"
+	"EquiliLearn/pkg/gemini"
 	"EquiliLearn/pkg/stt"
 	"EquiliLearn/pkg/tts"
 
@@ -22,6 +25,12 @@ type ISpeechService interface {
 	GetTranscriptionHistory(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]model.TranscriptionResponse, error)
 	DeleteTranscription(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 
+	// Speech Summarization (Gemini AI)
+	SummarizeTranscription(ctx context.Context, req model.SummarizeSpeechRequest, userID *uuid.UUID) (*model.SpeechSummaryResponse, error)
+	SummarizeSpeechAudio(ctx context.Context, req model.SummarizeSpeechAudioRequest, audioBytes []byte, filename string, contentType string, userID *uuid.UUID) (*model.SpeechSummaryResponse, error)
+	ExportSpeechSummary(ctx context.Context, id uuid.UUID, format string) (*model.ExportFileResult, error)
+	ExportSpeechSummaryDirect(ctx context.Context, req model.SummarizeSpeechRequest, format string, userID *uuid.UUID) (*model.ExportFileResult, error)
+
 	// Text-to-Speech (TTS)
 	SynthesizeSpeech(ctx context.Context, req model.SynthesizeSpeechRequest, userID *uuid.UUID) (*model.TTSAudioOutput, error)
 	GetAvailableVoices(ctx context.Context) []model.TTSVoiceResponse
@@ -34,14 +43,25 @@ type SpeechService struct {
 	ttsClient         tts.ITTSClient
 	transcriptionRepo repository.ITranscriptionRepository
 	ttsHistoryRepo    repository.ITTSHistoryRepository
+	geminiClient      gemini.IGeminiClient
+	summaryRepo       repository.IDocumentSummaryRepository
 }
 
-func NewSpeechService(sttClient stt.ISTTClient, ttsClient tts.ITTSClient, transcriptionRepo repository.ITranscriptionRepository, ttsHistoryRepo repository.ITTSHistoryRepository) *SpeechService {
+func NewSpeechService(
+	sttClient stt.ISTTClient,
+	ttsClient tts.ITTSClient,
+	transcriptionRepo repository.ITranscriptionRepository,
+	ttsHistoryRepo repository.ITTSHistoryRepository,
+	geminiClient gemini.IGeminiClient,
+	summaryRepo repository.IDocumentSummaryRepository,
+) *SpeechService {
 	return &SpeechService{
 		sttClient:         sttClient,
 		ttsClient:         ttsClient,
 		transcriptionRepo: transcriptionRepo,
 		ttsHistoryRepo:    ttsHistoryRepo,
+		geminiClient:      geminiClient,
+		summaryRepo:       summaryRepo,
 	}
 }
 
@@ -139,6 +159,345 @@ func (s *SpeechService) GetTranscriptionHistory(ctx context.Context, userID uuid
 
 func (s *SpeechService) DeleteTranscription(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	return s.transcriptionRepo.DeleteTranscription(ctx, id, userID)
+}
+
+// ==========================================
+// Speech Summarization (Gemini AI)
+// ==========================================
+
+func (s *SpeechService) SummarizeTranscription(ctx context.Context, req model.SummarizeSpeechRequest, userID *uuid.UUID) (*model.SpeechSummaryResponse, error) {
+	var transcriptText string
+	var lang string = req.Language
+
+	if req.TranscriptionID != nil {
+		if s.transcriptionRepo == nil {
+			return nil, fmt.Errorf("transcription repository not available")
+		}
+		tr, err := s.transcriptionRepo.GetTranscriptionByID(ctx, *req.TranscriptionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get transcription: %w", err)
+		}
+		if tr == nil {
+			return nil, fmt.Errorf("transcription not found")
+		}
+		transcriptText = tr.Text
+		if lang == "" {
+			lang = tr.Language
+		}
+	} else if strings.TrimSpace(req.Text) != "" {
+		transcriptText = strings.TrimSpace(req.Text)
+	} else {
+		return nil, fmt.Errorf("either transcription_id or text is required")
+	}
+
+	if lang == "" {
+		lang = "id"
+	}
+
+	detailLevel := req.DetailLevel
+	if detailLevel == "" {
+		detailLevel = "balanced"
+	}
+
+	targetAudience := req.TargetAudience
+	if targetAudience == "" {
+		targetAudience = "student"
+	}
+
+	title := req.Title
+	if title == "" {
+		title = "Speech Transcript Summary"
+	}
+
+	if s.geminiClient == nil {
+		return nil, fmt.Errorf("gemini client not initialized")
+	}
+
+	geminiReq := gemini.GeminiSummaryRequest{
+		TextContent:    transcriptText,
+		FileName:       title,
+		Language:       lang,
+		DetailLevel:    detailLevel,
+		TargetAudience: targetAudience,
+	}
+
+	result, err := s.geminiClient.SummarizeContent(ctx, geminiReq)
+	if err != nil {
+		return nil, fmt.Errorf("ai speech summarization failed: %w", err)
+	}
+
+	summaryID := uuid.New()
+	keyPointsJSON, _ := json.Marshal(result.KeyPoints)
+
+	shouldSave := true
+	if req.SaveToHistory != nil {
+		shouldSave = *req.SaveToHistory
+	}
+
+	if shouldSave && s.summaryRepo != nil {
+		summaryEntity := &entity.DocumentSummary{
+			ID:             summaryID,
+			UserID:         userID,
+			FileName:       title,
+			FileType:       "speech",
+			FileSize:       int64(len(transcriptText)),
+			Title:          result.Title,
+			Summary:        result.Summary,
+			KeyPoints:      string(keyPointsJSON),
+			Explanation:    result.Explanation,
+			Language:       lang,
+			DetailLevel:    detailLevel,
+			TargetAudience: targetAudience,
+			TokenCount:     result.TokenCount,
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
+		}
+		if err := s.summaryRepo.CreateDocumentSummary(ctx, summaryEntity); err != nil {
+			return nil, fmt.Errorf("failed to persist speech summary to database: %w", err)
+		}
+	}
+
+	return &model.SpeechSummaryResponse{
+		ID:              summaryID,
+		UserID:          userID,
+		TranscriptionID: req.TranscriptionID,
+		Title:           result.Title,
+		TranscriptText:  transcriptText,
+		Summary:         result.Summary,
+		KeyPoints:       result.KeyPoints,
+		Explanation:     result.Explanation,
+		Language:        lang,
+		DetailLevel:     detailLevel,
+		TargetAudience:  targetAudience,
+		Model:           result.Model,
+		TokenCount:      result.TokenCount,
+		CreatedAt:       time.Now(),
+	}, nil
+}
+
+func (s *SpeechService) SummarizeSpeechAudio(ctx context.Context, req model.SummarizeSpeechAudioRequest, audioBytes []byte, filename string, contentType string, userID *uuid.UUID) (*model.SpeechSummaryResponse, error) {
+	if len(audioBytes) == 0 {
+		return nil, fmt.Errorf("audio file is empty")
+	}
+
+	lang := req.Language
+	if lang == "" {
+		lang = "id"
+	}
+
+	detailLevel := req.DetailLevel
+	if detailLevel == "" {
+		detailLevel = "balanced"
+	}
+
+	targetAudience := req.TargetAudience
+	if targetAudience == "" {
+		targetAudience = "student"
+	}
+
+	title := req.Title
+	if title == "" {
+		title = filename
+		if title == "" {
+			title = "Audio Recording"
+		}
+	}
+
+	if contentType == "" {
+		contentType = "audio/mp3"
+	}
+
+	if s.geminiClient == nil {
+		return nil, fmt.Errorf("gemini client not initialized")
+	}
+
+	geminiReq := gemini.GeminiSummaryRequest{
+		InlineData:     audioBytes,
+		MIMEType:       contentType,
+		FileName:       filename,
+		Language:       lang,
+		DetailLevel:    detailLevel,
+		TargetAudience: targetAudience,
+	}
+
+	result, err := s.geminiClient.SummarizeContent(ctx, geminiReq)
+	if err != nil {
+		return nil, fmt.Errorf("ai audio summarization failed: %w", err)
+	}
+
+	summaryID := uuid.New()
+	keyPointsJSON, _ := json.Marshal(result.KeyPoints)
+
+	shouldSave := true
+	if req.SaveToHistory != nil {
+		shouldSave = *req.SaveToHistory
+	}
+
+	if shouldSave && s.summaryRepo != nil {
+		summaryEntity := &entity.DocumentSummary{
+			ID:             summaryID,
+			UserID:         userID,
+			FileName:       filename,
+			FileType:       "audio",
+			FileSize:       int64(len(audioBytes)),
+			Title:          result.Title,
+			Summary:        result.Summary,
+			KeyPoints:      string(keyPointsJSON),
+			Explanation:    result.Explanation,
+			Language:       lang,
+			DetailLevel:    detailLevel,
+			TargetAudience: targetAudience,
+			TokenCount:     result.TokenCount,
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
+		}
+		if err := s.summaryRepo.CreateDocumentSummary(ctx, summaryEntity); err != nil {
+			return nil, fmt.Errorf("failed to persist audio summary to database: %w", err)
+		}
+	}
+
+	return &model.SpeechSummaryResponse{
+		ID:             summaryID,
+		UserID:         userID,
+		Title:          result.Title,
+		TranscriptText: "",
+		Summary:        result.Summary,
+		KeyPoints:      result.KeyPoints,
+		Explanation:    result.Explanation,
+		Language:       lang,
+		DetailLevel:    detailLevel,
+		TargetAudience: targetAudience,
+		Model:          result.Model,
+		TokenCount:     result.TokenCount,
+		CreatedAt:      time.Now(),
+	}, nil
+}
+
+func (s *SpeechService) ExportSpeechSummary(ctx context.Context, id uuid.UUID, format string) (*model.ExportFileResult, error) {
+	if s.summaryRepo == nil {
+		return nil, fmt.Errorf("summary repository not available")
+	}
+
+	summaryEntity, err := s.summaryRepo.GetSummaryByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve speech summary: %w", err)
+	}
+	if summaryEntity == nil {
+		return nil, fmt.Errorf("speech summary not found")
+	}
+
+	var keyPoints []string
+	if summaryEntity.KeyPoints != "" {
+		_ = json.Unmarshal([]byte(summaryEntity.KeyPoints), &keyPoints)
+	}
+
+	payload := export.ExportPayload{
+		Title:          summaryEntity.Title,
+		Summary:        summaryEntity.Summary,
+		KeyPoints:      keyPoints,
+		Explanation:    summaryEntity.Explanation,
+		Language:       summaryEntity.Language,
+		DetailLevel:    summaryEntity.DetailLevel,
+		TargetAudience: summaryEntity.TargetAudience,
+		SourceType:     "Speech-to-Text Transcript",
+		CreatedAt:      summaryEntity.CreatedAt,
+	}
+
+	normFormat := strings.ToLower(strings.TrimSpace(format))
+	baseName := strings.ReplaceAll(summaryEntity.Title, " ", "_")
+	if baseName == "" {
+		baseName = "speech_summary"
+	}
+	baseName = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			return r
+		}
+		return '_'
+	}, baseName)
+
+	switch normFormat {
+	case "pdf", "application/pdf":
+		pdfBytes := export.GeneratePDF(payload)
+		return &model.ExportFileResult{
+			Data:        pdfBytes,
+			Filename:    fmt.Sprintf("%s.pdf", baseName),
+			ContentType: "application/pdf",
+		}, nil
+	case "md", "markdown", "text/markdown":
+		mdBytes := export.GenerateMarkdown(payload)
+		return &model.ExportFileResult{
+			Data:        mdBytes,
+			Filename:    fmt.Sprintf("%s.md", baseName),
+			ContentType: "text/markdown; charset=utf-8",
+		}, nil
+	case "txt", "text", "text/plain", "":
+		txtBytes := export.GenerateText(payload)
+		return &model.ExportFileResult{
+			Data:        txtBytes,
+			Filename:    fmt.Sprintf("%s.txt", baseName),
+			ContentType: "text/plain; charset=utf-8",
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported export format %q. Supported formats: 'pdf', 'txt', 'md'", format)
+	}
+}
+
+func (s *SpeechService) ExportSpeechSummaryDirect(ctx context.Context, req model.SummarizeSpeechRequest, format string, userID *uuid.UUID) (*model.ExportFileResult, error) {
+	summaryResp, err := s.SummarizeTranscription(ctx, req, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := export.ExportPayload{
+		Title:          summaryResp.Title,
+		Summary:        summaryResp.Summary,
+		KeyPoints:      summaryResp.KeyPoints,
+		Explanation:    summaryResp.Explanation,
+		TranscriptText: summaryResp.TranscriptText,
+		Language:       summaryResp.Language,
+		DetailLevel:    summaryResp.DetailLevel,
+		TargetAudience: summaryResp.TargetAudience,
+		SourceType:     "Speech-to-Text Transcript",
+		CreatedAt:      summaryResp.CreatedAt,
+	}
+
+	normFormat := strings.ToLower(strings.TrimSpace(format))
+	baseName := strings.ReplaceAll(summaryResp.Title, " ", "_")
+	if baseName == "" {
+		baseName = "speech_summary"
+	}
+	baseName = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			return r
+		}
+		return '_'
+	}, baseName)
+
+	switch normFormat {
+	case "pdf", "application/pdf":
+		pdfBytes := export.GeneratePDF(payload)
+		return &model.ExportFileResult{
+			Data:        pdfBytes,
+			Filename:    fmt.Sprintf("%s.pdf", baseName),
+			ContentType: "application/pdf",
+		}, nil
+	case "md", "markdown", "text/markdown":
+		mdBytes := export.GenerateMarkdown(payload)
+		return &model.ExportFileResult{
+			Data:        mdBytes,
+			Filename:    fmt.Sprintf("%s.md", baseName),
+			ContentType: "text/markdown; charset=utf-8",
+		}, nil
+	case "txt", "text", "text/plain", "":
+		txtBytes := export.GenerateText(payload)
+		return &model.ExportFileResult{
+			Data:        txtBytes,
+			Filename:    fmt.Sprintf("%s.txt", baseName),
+			ContentType: "text/plain; charset=utf-8",
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported export format %q. Supported formats: 'pdf', 'txt', 'md'", format)
+	}
 }
 
 // ==========================================

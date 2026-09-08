@@ -3,6 +3,7 @@ package rest
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -218,4 +219,154 @@ func (r *V1) DeleteTTSHistory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "TTS history deleted successfully"})
+}
+
+// SummarizeSpeech generates an AI structured summary and key takeaways from a speech transcript or transcription ID
+func (r *V1) SummarizeSpeech(c *gin.Context) {
+	var req model.SummarizeSpeechRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		RespondValidationError(c, err)
+		return
+	}
+
+	if req.TranscriptionID == nil && strings.TrimSpace(req.Text) == "" {
+		RespondError(c, http.StatusBadRequest, "Either transcription_id or text is required")
+		return
+	}
+
+	userID := r.getOptionalUserID(c)
+	ctx := c.Request.Context()
+
+	summary, err := r.service.SpeechService.SummarizeTranscription(ctx, req, userID)
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Speech summarization failed: %v", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Speech summarized successfully",
+		"data":    summary,
+	})
+}
+
+// SummarizeSpeechAudio handles multipart audio file upload (MP3, WAV, M4A, OGG, WebM, FLAC) and generates an AI summary with Gemini
+func (r *V1) SummarizeSpeechAudio(c *gin.Context) {
+	var req model.SummarizeSpeechAudioRequest
+	if err := c.ShouldBind(&req); err != nil {
+		RespondValidationError(c, err)
+		return
+	}
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		RespondError(c, http.StatusBadRequest, "Audio file is required (multipart field 'file')")
+		return
+	}
+
+	// Max 30MB file size limit
+	if fileHeader.Size > 30*1024*1024 {
+		RespondError(c, http.StatusBadRequest, "Audio file size exceeds the maximum limit of 30MB")
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, "Failed to read uploaded audio file")
+		return
+	}
+	defer file.Close()
+
+	fileBytes, err := io.ReadAll(file)
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, "Failed to process audio file contents")
+		return
+	}
+
+	contentType := fileHeader.Header.Get("Content-Type")
+	if contentType == "" || contentType == "application/octet-stream" {
+		ext := strings.ToLower(fileHeader.Filename)
+		switch {
+		case strings.HasSuffix(ext, ".mp3"):
+			contentType = "audio/mp3"
+		case strings.HasSuffix(ext, ".wav"):
+			contentType = "audio/wav"
+		case strings.HasSuffix(ext, ".ogg"):
+			contentType = "audio/ogg"
+		case strings.HasSuffix(ext, ".m4a"):
+			contentType = "audio/m4a"
+		case strings.HasSuffix(ext, ".flac"):
+			contentType = "audio/flac"
+		case strings.HasSuffix(ext, ".webm"):
+			contentType = "audio/webm"
+		default:
+			contentType = "audio/mp3"
+		}
+	}
+
+	userID := r.getOptionalUserID(c)
+	ctx := c.Request.Context()
+
+	summary, err := r.service.SpeechService.SummarizeSpeechAudio(ctx, req, fileBytes, fileHeader.Filename, contentType, userID)
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Audio summarization failed: %v", err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Audio speech summarized successfully",
+		"data":    summary,
+	})
+}
+
+// ExportSpeechSummaryByID exports a stored speech summary to PDF, TXT, or MD
+func (r *V1) ExportSpeechSummaryByID(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		RespondError(c, http.StatusBadRequest, "Invalid speech summary ID format")
+		return
+	}
+
+	format := c.DefaultQuery("format", "pdf")
+	ctx := c.Request.Context()
+
+	result, err := r.service.SpeechService.ExportSpeechSummary(ctx, id, format)
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to export speech summary: %v", err))
+		return
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", result.Filename))
+	c.Header("Content-Type", result.ContentType)
+	c.Header("Content-Length", strconv.Itoa(len(result.Data)))
+	c.Data(http.StatusOK, result.ContentType, result.Data)
+}
+
+// ExportSpeechSummaryDirect generates a speech summary on-the-fly and directly streams PDF or Text
+func (r *V1) ExportSpeechSummaryDirect(c *gin.Context) {
+	var req model.SummarizeSpeechRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		RespondValidationError(c, err)
+		return
+	}
+
+	if req.TranscriptionID == nil && strings.TrimSpace(req.Text) == "" {
+		RespondError(c, http.StatusBadRequest, "Either transcription_id or text is required")
+		return
+	}
+
+	format := c.DefaultQuery("format", "pdf")
+	userID := r.getOptionalUserID(c)
+	ctx := c.Request.Context()
+
+	result, err := r.service.SpeechService.ExportSpeechSummaryDirect(ctx, req, format, userID)
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Failed to export speech summary: %v", err))
+		return
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", result.Filename))
+	c.Header("Content-Type", result.ContentType)
+	c.Header("Content-Length", strconv.Itoa(len(result.Data)))
+	c.Data(http.StatusOK, result.ContentType, result.Data)
 }

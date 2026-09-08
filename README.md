@@ -1,4 +1,4 @@
-﻿# EquiliLearn Backend
+# EquiliLearn Backend
 
 > **Comprehensive backend API** for EquiliLearn — featuring real-time Speech-to-Text (STT), Text-to-Speech (TTS), AI document summarization (Gemini), collaborative group chat (WebSocket), and JWT-based authentication with Google OAuth2.
 
@@ -178,15 +178,21 @@ Base URL: `http://localhost:8080/api/v1`
 | POST | `/auth/forgot-password` | Request password reset |
 | POST | `/auth/reset-password` | Confirm password reset |
 
-### Speech (STT / TTS)
+### Speech (STT / TTS & AI Summarization)
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | GET | `/ws/speech-to-text` | Optional | **WebSocket** real-time speech recognition |
 | GET | `/speech/history` | Required | Get transcription history |
 | DELETE | `/speech/history/:id` | Required | Delete a transcription |
+| POST | `/speech/summarize` | Optional | Generate AI summary from STT transcript or transcript ID (Gemini) |
+| POST | `/speech/summarize/export` | Optional | Generate speech summary and directly stream as PDF/Text (`?format=pdf\|txt\|md`) |
+| POST | `/speech/summarize-audio` | Optional | Upload audio recording and generate AI summary (Gemini) |
+| GET | `/speech/summarize/:id/export` | Optional | Export stored speech summary to PDF, TXT, or Markdown (`?format=pdf\|txt\|md`) |
 | POST | `/speech/synthesize` | — | Text-to-Speech synthesis |
 | GET | `/speech/voices` | — | List available TTS voices |
+| GET | `/speech/tts/history` | Required | Get TTS synthesis history |
+| DELETE | `/speech/tts/history/:id` | Required | Delete TTS history |
 
 ### AI Documents
 
@@ -196,6 +202,7 @@ Base URL: `http://localhost:8080/api/v1`
 | POST | `/documents/summarize-text` | — | Summarize plain text (Gemini) |
 | GET | `/documents/history` | Required | Get document summary history |
 | GET | `/documents/:id` | — | Get a specific summary |
+| GET | `/documents/:id/export` | Optional | Export document summary to PDF, TXT, or Markdown (`?format=pdf\|txt\|md`) |
 | DELETE | `/documents/:id` | Required | Delete a summary |
 
 ### Group Chat

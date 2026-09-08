@@ -11,6 +11,7 @@ import (
 	"EquiliLearn/internal/model"
 	"EquiliLearn/internal/repository"
 	"EquiliLearn/pkg/document"
+	"EquiliLearn/pkg/export"
 	"EquiliLearn/pkg/gemini"
 
 	"github.com/google/uuid"
@@ -23,6 +24,7 @@ type IDocumentSummaryService interface {
 	GetSummaryByID(ctx context.Context, id uuid.UUID) (*model.DocumentSummaryResponse, error)
 	UpdateSummary(ctx context.Context, id uuid.UUID, userID uuid.UUID, req model.UpdateDocumentSummaryRequest) (*model.DocumentSummaryResponse, error)
 	DeleteSummary(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
+	ExportSummary(ctx context.Context, id uuid.UUID, format string) (*model.ExportFileResult, error)
 }
 
 type DocumentSummaryService struct {
@@ -360,4 +362,77 @@ func (s *DocumentSummaryService) UpdateSummary(ctx context.Context, id uuid.UUID
 
 func (s *DocumentSummaryService) DeleteSummary(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
 	return s.repo.DeleteSummary(ctx, id, userID)
+}
+
+func (s *DocumentSummaryService) ExportSummary(ctx context.Context, id uuid.UUID, format string) (*model.ExportFileResult, error) {
+	summaryEntity, err := s.repo.GetSummaryByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve document summary: %w", err)
+	}
+	if summaryEntity == nil {
+		return nil, fmt.Errorf("document summary not found")
+	}
+
+	var keyPoints []string
+	if summaryEntity.KeyPoints != "" {
+		_ = json.Unmarshal([]byte(summaryEntity.KeyPoints), &keyPoints)
+	}
+
+	sourceType := "Document (" + strings.ToUpper(summaryEntity.FileType) + ")"
+	if summaryEntity.FileType == "speech" || summaryEntity.FileType == "stt" {
+		sourceType = "Speech-to-Text Transcript"
+	} else if summaryEntity.FileType == "audio" {
+		sourceType = "Audio Recording"
+	}
+
+	payload := export.ExportPayload{
+		Title:          summaryEntity.Title,
+		Summary:        summaryEntity.Summary,
+		KeyPoints:      keyPoints,
+		Explanation:    summaryEntity.Explanation,
+		Language:       summaryEntity.Language,
+		DetailLevel:    summaryEntity.DetailLevel,
+		TargetAudience: summaryEntity.TargetAudience,
+		SourceType:     sourceType,
+		CreatedAt:      summaryEntity.CreatedAt,
+	}
+
+	normFormat := strings.ToLower(strings.TrimSpace(format))
+	baseName := strings.ReplaceAll(summaryEntity.Title, " ", "_")
+	if baseName == "" {
+		baseName = "summary"
+	}
+	// Sanitize filename
+	baseName = strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			return r
+		}
+		return '_'
+	}, baseName)
+
+	switch normFormat {
+	case "pdf", "application/pdf":
+		pdfBytes := export.GeneratePDF(payload)
+		return &model.ExportFileResult{
+			Data:        pdfBytes,
+			Filename:    fmt.Sprintf("%s.pdf", baseName),
+			ContentType: "application/pdf",
+		}, nil
+	case "md", "markdown", "text/markdown":
+		mdBytes := export.GenerateMarkdown(payload)
+		return &model.ExportFileResult{
+			Data:        mdBytes,
+			Filename:    fmt.Sprintf("%s.md", baseName),
+			ContentType: "text/markdown; charset=utf-8",
+		}, nil
+	case "txt", "text", "text/plain", "":
+		txtBytes := export.GenerateText(payload)
+		return &model.ExportFileResult{
+			Data:        txtBytes,
+			Filename:    fmt.Sprintf("%s.txt", baseName),
+			ContentType: "text/plain; charset=utf-8",
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported export format %q. Supported formats: 'pdf', 'txt', 'md'", format)
+	}
 }

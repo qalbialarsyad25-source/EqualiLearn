@@ -41,6 +41,12 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 			speech.GET("/history", v1.Authentication, v1.GetTranscriptionHistory)
 			speech.DELETE("/history/:id", v1.Authentication, v1.DeleteTranscription)
 
+			// Speech Summarization (Gemini AI)
+			speech.POST("/summarize", v1.OptionalAuthentication, v1.SummarizeSpeech)
+			speech.POST("/summarize/export", v1.OptionalAuthentication, v1.ExportSpeechSummaryDirect)
+			speech.POST("/summarize-audio", v1.OptionalAuthentication, v1.SummarizeSpeechAudio)
+			speech.GET("/summarize/:id/export", v1.OptionalAuthentication, v1.ExportSpeechSummaryByID)
+
 			// Text-to-Speech (TTS)
 			speech.POST("/synthesize", v1.OptionalAuthentication, v1.SynthesizeSpeech)
 			speech.POST("/text-to-speech", v1.OptionalAuthentication, v1.SynthesizeSpeech)
@@ -56,6 +62,7 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 			documents.POST("/summarize-text", v1.OptionalAuthentication, v1.SummarizeText)
 			documents.GET("/history", v1.Authentication, v1.GetDocumentSummaries)
 			documents.GET("/:id", v1.GetDocumentSummaryByID)
+			documents.GET("/:id/export", v1.OptionalAuthentication, v1.ExportDocumentSummaryByID)
 			documents.PUT("/:id", v1.Authentication, v1.UpdateDocumentSummary)
 			documents.PATCH("/:id", v1.Authentication, v1.UpdateDocumentSummary)
 			documents.DELETE("/:id", v1.Authentication, v1.DeleteDocumentSummary)

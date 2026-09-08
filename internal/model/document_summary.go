@@ -69,3 +69,10 @@ type UpdateDocumentSummaryRequest struct {
 	TargetAudience *string   `json:"target_audience"`
 }
 
+// ExportFileResult represents binary file payload (PDF or Text) with filename and content type headers.
+type ExportFileResult struct {
+	Data        []byte
+	Filename    string
+	ContentType string
+}
+
