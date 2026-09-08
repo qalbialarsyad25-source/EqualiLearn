@@ -63,7 +63,6 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 		history := api.Group("/history")
 		{
 			history.GET("", v1.Authentication, v1.GetAllHistory)
-			history.GET("/all", v1.Authentication, v1.GetAllHistory)
 			history.GET("/stats", v1.Authentication, v1.GetHistoryStats)
 			history.DELETE("/clear", v1.Authentication, v1.ClearAllHistory)
 			history.DELETE("/:type/:id", v1.Authentication, v1.DeleteHistoryItem)
