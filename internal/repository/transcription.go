@@ -32,8 +32,14 @@ func (r *TranscriptionRepository) CreateTranscription(ctx context.Context, trans
 
 func (r *TranscriptionRepository) GetTranscriptionsByUserID(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]entity.Transcription, error) {
 	var transcriptions []entity.Transcription
-	err := r.db.WithContext(ctx).
-		Where("user_id = ?", userID).
+	query := r.db.WithContext(ctx)
+	if userID == uuid.Nil {
+		query = query.Where("user_id IS NULL")
+	} else {
+		query = query.Where("user_id = ? OR user_id IS NULL", userID)
+	}
+
+	err := query.
 		Limit(pagination.Limit).
 		Offset(pagination.Offset()).
 		Order("created_at DESC").
@@ -57,7 +63,11 @@ func (r *TranscriptionRepository) GetTranscriptionByID(ctx context.Context, id u
 }
 
 func (r *TranscriptionRepository) DeleteTranscription(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
-	result := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).Delete(&entity.Transcription{})
+	query := r.db.WithContext(ctx).Where("id = ?", id)
+	if userID != uuid.Nil {
+		query = query.Where("user_id = ? OR user_id IS NULL", userID)
+	}
+	result := query.Delete(&entity.Transcription{})
 	if result.Error != nil {
 		return result.Error
 	}

@@ -14,16 +14,12 @@ import (
 
 // GetAllHistory retrieves unified chronological history across Document Summaries, STT, and TTS.
 func (r *V1) GetAllHistory(c *gin.Context) {
+	var userId uuid.UUID
 	userIdVal, exists := c.Get("userId")
-	if !exists {
-		RespondError(c, http.StatusUnauthorized, "Authentication required")
-		return
-	}
-
-	userId, ok := userIdVal.(uuid.UUID)
-	if !ok {
-		RespondError(c, http.StatusBadRequest, "Invalid user identity")
-		return
+	if exists {
+		if uid, ok := userIdVal.(uuid.UUID); ok {
+			userId = uid
+		}
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -53,16 +49,12 @@ func (r *V1) GetAllHistory(c *gin.Context) {
 
 // GetHistoryStats retrieves aggregate statistics of user activities.
 func (r *V1) GetHistoryStats(c *gin.Context) {
+	var userId uuid.UUID
 	userIdVal, exists := c.Get("userId")
-	if !exists {
-		RespondError(c, http.StatusUnauthorized, "Authentication required")
-		return
-	}
-
-	userId, ok := userIdVal.(uuid.UUID)
-	if !ok {
-		RespondError(c, http.StatusBadRequest, "Invalid user identity")
-		return
+	if exists {
+		if uid, ok := userIdVal.(uuid.UUID); ok {
+			userId = uid
+		}
 	}
 
 	ctx := c.Request.Context()
