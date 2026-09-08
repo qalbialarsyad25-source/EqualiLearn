@@ -23,21 +23,25 @@ type ISpeechService interface {
 	DeleteTranscription(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 
 	// Text-to-Speech (TTS)
-	SynthesizeSpeech(ctx context.Context, req model.SynthesizeSpeechRequest) (*model.TTSAudioOutput, error)
+	SynthesizeSpeech(ctx context.Context, req model.SynthesizeSpeechRequest, userID *uuid.UUID) (*model.TTSAudioOutput, error)
 	GetAvailableVoices(ctx context.Context) []model.TTSVoiceResponse
+	GetTTSHistory(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]model.TTSHistoryResponse, int64, error)
+	DeleteTTSHistory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 }
 
 type SpeechService struct {
 	sttClient         stt.ISTTClient
 	ttsClient         tts.ITTSClient
 	transcriptionRepo repository.ITranscriptionRepository
+	ttsHistoryRepo    repository.ITTSHistoryRepository
 }
 
-func NewSpeechService(sttClient stt.ISTTClient, ttsClient tts.ITTSClient, transcriptionRepo repository.ITranscriptionRepository) *SpeechService {
+func NewSpeechService(sttClient stt.ISTTClient, ttsClient tts.ITTSClient, transcriptionRepo repository.ITranscriptionRepository, ttsHistoryRepo repository.ITTSHistoryRepository) *SpeechService {
 	return &SpeechService{
 		sttClient:         sttClient,
 		ttsClient:         ttsClient,
 		transcriptionRepo: transcriptionRepo,
+		ttsHistoryRepo:    ttsHistoryRepo,
 	}
 }
 
@@ -141,7 +145,7 @@ func (s *SpeechService) DeleteTranscription(ctx context.Context, id uuid.UUID, u
 // Text-to-Speech (TTS) Implementations
 // ==========================================
 
-func (s *SpeechService) SynthesizeSpeech(ctx context.Context, req model.SynthesizeSpeechRequest) (*model.TTSAudioOutput, error) {
+func (s *SpeechService) SynthesizeSpeech(ctx context.Context, req model.SynthesizeSpeechRequest, userID *uuid.UUID) (*model.TTSAudioOutput, error) {
 	trimmedText := strings.TrimSpace(req.Text)
 	if trimmedText == "" {
 		return nil, fmt.Errorf("synthesis text cannot be empty")
@@ -182,6 +186,21 @@ func (s *SpeechService) SynthesizeSpeech(ctx context.Context, req model.Synthesi
 		estimatedDurationMs = 500
 	}
 
+	// Persist TTS generation history if user is authenticated and repository is available
+	if userID != nil && s.ttsHistoryRepo != nil {
+		historyRecord := &entity.TTSHistory{
+			ID:         uuid.New(),
+			UserID:     userID,
+			Text:       trimmedText,
+			Voice:      voice,
+			Format:     format,
+			DurationMs: estimatedDurationMs,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
+		}
+		_ = s.ttsHistoryRepo.CreateTTSHistory(ctx, historyRecord)
+	}
+
 	return &model.TTSAudioOutput{
 		AudioData:          result.AudioBytes,
 		ContentType:        result.ContentType,
@@ -205,4 +224,44 @@ func (s *SpeechService) GetAvailableVoices(ctx context.Context) []model.TTSVoice
 		})
 	}
 	return responses
+}
+
+func (s *SpeechService) GetTTSHistory(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]model.TTSHistoryResponse, int64, error) {
+	if pagination.Limit <= 0 {
+		pagination.Limit = 10
+	}
+	if pagination.Page <= 0 {
+		pagination.Page = 1
+	}
+
+	if s.ttsHistoryRepo == nil {
+		return []model.TTSHistoryResponse{}, 0, nil
+	}
+
+	records, total, err := s.ttsHistoryRepo.GetTTSHistoryByUserID(ctx, userID, pagination)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	responses := make([]model.TTSHistoryResponse, 0, len(records))
+	for _, r := range records {
+		responses = append(responses, model.TTSHistoryResponse{
+			ID:         r.ID,
+			UserID:     r.UserID,
+			Text:       r.Text,
+			Voice:      r.Voice,
+			Format:     r.Format,
+			DurationMs: r.DurationMs,
+			CreatedAt:  r.CreatedAt,
+		})
+	}
+
+	return responses, total, nil
+}
+
+func (s *SpeechService) DeleteTTSHistory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	if s.ttsHistoryRepo == nil {
+		return nil
+	}
+	return s.ttsHistoryRepo.DeleteTTSHistory(ctx, id, userID)
 }

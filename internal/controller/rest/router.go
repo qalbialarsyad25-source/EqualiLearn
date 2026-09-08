@@ -45,6 +45,8 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 			speech.POST("/synthesize", v1.SynthesizeSpeech)
 			speech.POST("/text-to-speech", v1.SynthesizeSpeech)
 			speech.GET("/voices", v1.GetTTSVoices)
+			speech.GET("/tts/history", v1.Authentication, v1.GetTTSHistory)
+			speech.DELETE("/tts/history/:id", v1.Authentication, v1.DeleteTTSHistory)
 		}
 
 		// AI Document & Presentation Summarization REST endpoints (Gemini)
@@ -55,6 +57,16 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 			documents.GET("/history", v1.Authentication, v1.GetDocumentSummaries)
 			documents.GET("/:id", v1.GetDocumentSummaryByID)
 			documents.DELETE("/:id", v1.Authentication, v1.DeleteDocumentSummary)
+		}
+
+		// Unified Activity History REST endpoints (Document Summaries, STT, TTS)
+		history := api.Group("/history")
+		{
+			history.GET("", v1.Authentication, v1.GetAllHistory)
+			history.GET("/all", v1.Authentication, v1.GetAllHistory)
+			history.GET("/stats", v1.Authentication, v1.GetHistoryStats)
+			history.DELETE("/clear", v1.Authentication, v1.ClearAllHistory)
+			history.DELETE("/:type/:id", v1.Authentication, v1.DeleteHistoryItem)
 		}
 
 		// Collaborative Group Chat REST endpoints

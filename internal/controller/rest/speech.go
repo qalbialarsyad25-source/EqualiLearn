@@ -102,8 +102,11 @@ func (r *V1) SynthesizeSpeech(c *gin.Context) {
 		return
 	}
 
+	// Optional authenticated user
+	userID := r.getOptionalUserID(c)
+
 	ctx := c.Request.Context()
-	output, err := r.service.SpeechService.SynthesizeSpeech(ctx, req)
+	output, err := r.service.SpeechService.SynthesizeSpeech(ctx, req, userID)
 	if err != nil {
 		RespondError(c, http.StatusInternalServerError, fmt.Sprintf("Speech synthesis failed: %v", err))
 		return
@@ -145,4 +148,74 @@ func (r *V1) GetTTSVoices(c *gin.Context) {
 		"data":  voices,
 		"count": len(voices),
 	})
+}
+
+// GetTTSHistory handles retrieving paginated text-to-speech generation history for logged-in user
+func (r *V1) GetTTSHistory(c *gin.Context) {
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	userId, ok := userIdVal.(uuid.UUID)
+	if !ok {
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+
+	pagination := model.Pagination{
+		Page:  page,
+		Limit: limit,
+	}
+
+	ctx := c.Request.Context()
+	history, total, err := r.service.SpeechService.GetTTSHistory(ctx, userId, pagination)
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, "Failed to retrieve TTS history")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  history,
+		"total": total,
+		"pagination": gin.H{
+			"page":  pagination.Page,
+			"limit": pagination.Limit,
+		},
+	})
+}
+
+// DeleteTTSHistory handles deleting a specific TTS record
+func (r *V1) DeleteTTSHistory(c *gin.Context) {
+	userIdVal, exists := c.Get("userId")
+	if !exists {
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	userId, ok := userIdVal.(uuid.UUID)
+	if !ok {
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
+		return
+	}
+
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		RespondError(c, http.StatusBadRequest, "Invalid TTS history ID format")
+		return
+	}
+
+	ctx := c.Request.Context()
+	err = r.service.SpeechService.DeleteTTSHistory(ctx, id, userId)
+	if err != nil {
+		RespondError(c, http.StatusInternalServerError, "Failed to delete TTS history")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "TTS history deleted successfully"})
 }

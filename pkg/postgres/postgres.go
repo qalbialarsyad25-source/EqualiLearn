@@ -31,6 +31,7 @@ func migrate(db *gorm.DB) {
 		&entity.User{},
 		&entity.Transcription{},
 		&entity.DocumentSummary{},
+		&entity.TTSHistory{},
 		&entity.Group{},
 		&entity.GroupMember{},
 		&entity.GroupMessage{},

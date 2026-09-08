@@ -51,11 +51,51 @@ func (m *mockTranscriptionRepo) DeleteTranscription(ctx context.Context, id uuid
 	return nil
 }
 
+type mockTTSHistoryRepo struct {
+	items []entity.TTSHistory
+}
+
+func (m *mockTTSHistoryRepo) CreateTTSHistory(ctx context.Context, item *entity.TTSHistory) error {
+	m.items = append(m.items, *item)
+	return nil
+}
+
+func (m *mockTTSHistoryRepo) GetTTSHistoryByUserID(ctx context.Context, userID uuid.UUID, pagination model.Pagination) ([]entity.TTSHistory, int64, error) {
+	var results []entity.TTSHistory
+	for _, it := range m.items {
+		if it.UserID != nil && *it.UserID == userID {
+			results = append(results, it)
+		}
+	}
+	return results, int64(len(results)), nil
+}
+
+func (m *mockTTSHistoryRepo) GetTTSHistoryByID(ctx context.Context, id uuid.UUID) (*entity.TTSHistory, error) {
+	for _, it := range m.items {
+		if it.ID == id {
+			return &it, nil
+		}
+	}
+	return nil, nil
+}
+
+func (m *mockTTSHistoryRepo) DeleteTTSHistory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	var filtered []entity.TTSHistory
+	for _, it := range m.items {
+		if !(it.ID == id && it.UserID != nil && *it.UserID == userID) {
+			filtered = append(filtered, it)
+		}
+	}
+	m.items = filtered
+	return nil
+}
+
 func TestSpeechService_StartSTTSession(t *testing.T) {
 	mockSTT := stt.NewMockSTTClient()
 	mockTTS := tts.NewMockTTSClient()
 	repo := &mockTranscriptionRepo{}
-	svc := NewSpeechService(mockSTT, mockTTS, repo)
+	ttsRepo := &mockTTSHistoryRepo{}
+	svc := NewSpeechService(mockSTT, mockTTS, repo, ttsRepo)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -86,7 +126,8 @@ func TestSpeechService_SaveAndGetHistory(t *testing.T) {
 	mockSTT := stt.NewMockSTTClient()
 	mockTTS := tts.NewMockTTSClient()
 	repo := &mockTranscriptionRepo{}
-	svc := NewSpeechService(mockSTT, mockTTS, repo)
+	ttsRepo := &mockTTSHistoryRepo{}
+	svc := NewSpeechService(mockSTT, mockTTS, repo, ttsRepo)
 
 	ctx := context.Background()
 	userID := uuid.New()
@@ -126,9 +167,11 @@ func TestSpeechService_SynthesizeSpeechAndVoices(t *testing.T) {
 	mockSTT := stt.NewMockSTTClient()
 	mockTTS := tts.NewMockTTSClient()
 	repo := &mockTranscriptionRepo{}
-	svc := NewSpeechService(mockSTT, mockTTS, repo)
+	ttsRepo := &mockTTSHistoryRepo{}
+	svc := NewSpeechService(mockSTT, mockTTS, repo, ttsRepo)
 
 	ctx := context.Background()
+	userID := uuid.New()
 
 	// 1. Test GetAvailableVoices
 	voices := svc.GetAvailableVoices(ctx)
@@ -147,14 +190,14 @@ func TestSpeechService_SynthesizeSpeechAndVoices(t *testing.T) {
 		t.Errorf("expected 'aura-asteria-en' in voice list")
 	}
 
-	// 2. Test SynthesizeSpeech
+	// 2. Test SynthesizeSpeech with UserID (saves to history)
 	req := model.SynthesizeSpeechRequest{
 		Text:   "Hello from EquiliLearn text to speech engine.",
 		Voice:  "aura-asteria-en",
 		Format: "wav",
 	}
 
-	output, err := svc.SynthesizeSpeech(ctx, req)
+	output, err := svc.SynthesizeSpeech(ctx, req, &userID)
 	if err != nil {
 		t.Fatalf("expected no error synthesizing speech, got %v", err)
 	}
@@ -175,8 +218,31 @@ func TestSpeechService_SynthesizeSpeechAndVoices(t *testing.T) {
 		t.Errorf("expected Voice 'aura-asteria-en', got %s", output.Voice)
 	}
 
-	// 3. Test empty text error
-	_, err = svc.SynthesizeSpeech(ctx, model.SynthesizeSpeechRequest{Text: ""})
+	// 3. Test TTS History
+	ttsHist, total, err := svc.GetTTSHistory(ctx, userID, model.Pagination{Page: 1, Limit: 10})
+	if err != nil {
+		t.Fatalf("unexpected error getting TTS history: %v", err)
+	}
+	if total != 1 || len(ttsHist) != 1 {
+		t.Fatalf("expected 1 TTS history item, got %d (total %d)", len(ttsHist), total)
+	}
+	if ttsHist[0].Text != "Hello from EquiliLearn text to speech engine." {
+		t.Errorf("unexpected TTS history text: %s", ttsHist[0].Text)
+	}
+
+	// Delete TTS history
+	err = svc.DeleteTTSHistory(ctx, ttsHist[0].ID.(uuid.UUID), userID)
+	if err != nil {
+		t.Fatalf("failed to delete TTS history: %v", err)
+	}
+
+	ttsHistAfter, totalAfter, _ := svc.GetTTSHistory(ctx, userID, model.Pagination{Page: 1, Limit: 10})
+	if totalAfter != 0 || len(ttsHistAfter) != 0 {
+		t.Fatalf("expected 0 TTS items after delete, got %d", len(ttsHistAfter))
+	}
+
+	// 4. Test empty text error
+	_, err = svc.SynthesizeSpeech(ctx, model.SynthesizeSpeechRequest{Text: ""}, nil)
 	if err == nil {
 		t.Fatal("expected error when synthesizing empty text")
 	}

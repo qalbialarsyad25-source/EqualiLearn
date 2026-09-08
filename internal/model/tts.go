@@ -35,3 +35,15 @@ type SynthesizeSpeechJsonResponse struct {
 	Format             string `json:"format"`
 	DurationEstimateMs int64  `json:"duration_estimate_ms,omitempty"`
 }
+
+// TTSHistoryResponse represents a recorded text-to-speech generation in response objects.
+type TTSHistoryResponse struct {
+	ID         any    `json:"id"`
+	UserID     any    `json:"user_id,omitempty"`
+	Text       string `json:"text"`
+	Voice      string `json:"voice"`
+	Format     string `json:"format"`
+	DurationMs int64  `json:"duration_ms"`
+	CreatedAt  any    `json:"created_at"`
+}
+
