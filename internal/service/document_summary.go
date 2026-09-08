@@ -113,7 +113,7 @@ func (s *DocumentSummaryService) SummarizeDocument(ctx context.Context, req mode
 
 	if shouldSave && s.repo != nil {
 		if err := s.repo.CreateDocumentSummary(ctx, summaryEntity); err != nil {
-			fmt.Printf("[Service] Warning: Failed to persist document summary to database: %v\n", err)
+			return nil, fmt.Errorf("failed to persist document summary to database: %w", err)
 		}
 	}
 
@@ -205,7 +205,7 @@ func (s *DocumentSummaryService) SummarizeText(ctx context.Context, req model.Su
 
 	if shouldSave && s.repo != nil {
 		if err := s.repo.CreateDocumentSummary(ctx, summaryEntity); err != nil {
-			fmt.Printf("[Service] Warning: Failed to persist text summary to database: %v\n", err)
+			return nil, fmt.Errorf("failed to persist text summary to database: %w", err)
 		}
 	}
 

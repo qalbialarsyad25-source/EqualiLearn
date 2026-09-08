@@ -97,14 +97,18 @@ func (r *V1) SummarizeText(c *gin.Context) {
 	})
 }
 
-// GetDocumentSummaries returns paginated summary history for the authenticated or guest user
+// GetDocumentSummaries returns paginated summary history for the authenticated user
 func (r *V1) GetDocumentSummaries(c *gin.Context) {
-	var userId uuid.UUID
 	userIdVal, exists := c.Get("userId")
-	if exists {
-		if uid, ok := userIdVal.(uuid.UUID); ok {
-			userId = uid
-		}
+	if !exists {
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	userId, ok := userIdVal.(uuid.UUID)
+	if !ok {
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
+		return
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

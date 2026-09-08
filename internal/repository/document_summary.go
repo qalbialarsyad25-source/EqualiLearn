@@ -39,13 +39,7 @@ func (r *DocumentSummaryRepository) GetSummariesByUserID(ctx context.Context, us
 	var summaries []entity.DocumentSummary
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&entity.DocumentSummary{})
-	if userID == uuid.Nil {
-		query = query.Where("user_id IS NULL")
-	} else {
-		query = query.Where("user_id = ? OR user_id IS NULL", userID)
-	}
-
+	query := r.db.WithContext(ctx).Model(&entity.DocumentSummary{}).Where("user_id = ?", userID)
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -75,11 +69,7 @@ func (r *DocumentSummaryRepository) GetSummaryByID(ctx context.Context, id uuid.
 }
 
 func (r *DocumentSummaryRepository) DeleteSummary(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
-	query := r.db.WithContext(ctx).Where("id = ?", id)
-	if userID != uuid.Nil {
-		query = query.Where("user_id = ? OR user_id IS NULL", userID)
-	}
-	result := query.Delete(&entity.DocumentSummary{})
+	result := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).Delete(&entity.DocumentSummary{})
 	if result.Error != nil {
 		return result.Error
 	}

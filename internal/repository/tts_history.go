@@ -34,13 +34,7 @@ func (r *TTSHistoryRepository) GetTTSHistoryByUserID(ctx context.Context, userID
 	var items []entity.TTSHistory
 	var total int64
 
-	query := r.db.WithContext(ctx).Model(&entity.TTSHistory{})
-	if userID == uuid.Nil {
-		query = query.Where("user_id IS NULL")
-	} else {
-		query = query.Where("user_id = ? OR user_id IS NULL", userID)
-	}
-
+	query := r.db.WithContext(ctx).Model(&entity.TTSHistory{}).Where("user_id = ?", userID)
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -70,11 +64,7 @@ func (r *TTSHistoryRepository) GetTTSHistoryByID(ctx context.Context, id uuid.UU
 }
 
 func (r *TTSHistoryRepository) DeleteTTSHistory(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
-	query := r.db.WithContext(ctx).Where("id = ?", id)
-	if userID != uuid.Nil {
-		query = query.Where("user_id = ? OR user_id IS NULL", userID)
-	}
-	result := query.Delete(&entity.TTSHistory{})
+	result := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).Delete(&entity.TTSHistory{})
 	if result.Error != nil {
 		return result.Error
 	}

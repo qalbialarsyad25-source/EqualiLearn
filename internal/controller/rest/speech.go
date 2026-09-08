@@ -13,14 +13,18 @@ import (
 	"github.com/google/uuid"
 )
 
-// GetTranscriptionHistory handles retrieving paginated STT history for user
+// GetTranscriptionHistory handles retrieving paginated STT history for logged-in user
 func (r *V1) GetTranscriptionHistory(c *gin.Context) {
-	var userId uuid.UUID
 	userIdVal, exists := c.Get("userId")
-	if exists {
-		if uid, ok := userIdVal.(uuid.UUID); ok {
-			userId = uid
-		}
+	if !exists {
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	userId, ok := userIdVal.(uuid.UUID)
+	if !ok {
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
+		return
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -146,14 +150,18 @@ func (r *V1) GetTTSVoices(c *gin.Context) {
 	})
 }
 
-// GetTTSHistory handles retrieving paginated text-to-speech generation history for user
+// GetTTSHistory handles retrieving paginated text-to-speech generation history for logged-in user
 func (r *V1) GetTTSHistory(c *gin.Context) {
-	var userId uuid.UUID
 	userIdVal, exists := c.Get("userId")
-	if exists {
-		if uid, ok := userIdVal.(uuid.UUID); ok {
-			userId = uid
-		}
+	if !exists {
+		RespondError(c, http.StatusUnauthorized, "Authentication required")
+		return
+	}
+
+	userId, ok := userIdVal.(uuid.UUID)
+	if !ok {
+		RespondError(c, http.StatusBadRequest, "Invalid user identity")
+		return
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
