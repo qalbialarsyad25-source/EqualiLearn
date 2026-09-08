@@ -19,11 +19,12 @@ type UnifiedHistoryItem struct {
 	ID          uuid.UUID `json:"id"`
 	Type        string    `json:"type"` // "document_summary", "stt", "tts"
 	Title       string    `json:"title"`
+	Content     string    `json:"content"`
 	Description string    `json:"description"`
 	Language    string    `json:"language,omitempty"`
 	DurationMs  int64     `json:"duration_ms,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
-	Details     any       `json:"details"` // DocumentSummaryResponse, TranscriptionResponse, or TTSHistoryResponse
+	Details     any       `json:"details,omitempty"` // DocumentSummaryResponse, TranscriptionResponse, or TTSHistoryResponse
 }
 
 // UnifiedHistoryQuery defines parameters for retrieving unified history items.

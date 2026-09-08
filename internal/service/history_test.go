@@ -289,11 +289,25 @@ func TestHistoryService_GetAllHistory_Unified(t *testing.T) {
 	if res.Data[0].Type != model.HistoryTypeTTS {
 		t.Errorf("expected 1st item to be TTS, got %s", res.Data[0].Type)
 	}
+	if res.Data[0].Content != "Welcome to modern learning." {
+		t.Errorf("expected TTS content, got %s", res.Data[0].Content)
+	}
+
 	if res.Data[1].Type != model.HistoryTypeSTT {
 		t.Errorf("expected 2nd item to be STT, got %s", res.Data[1].Type)
 	}
+	if res.Data[1].Content != "Diskusi mengenai fisika nuklir" {
+		t.Errorf("expected STT content, got %s", res.Data[1].Content)
+	}
+
 	if res.Data[2].Type != model.HistoryTypeDocumentSummary {
 		t.Errorf("expected 3rd item to be document_summary, got %s", res.Data[2].Type)
+	}
+	if res.Data[2].Content != "Quantum mechanics summary notes." {
+		t.Errorf("expected Summary content, got %s", res.Data[2].Content)
+	}
+	if res.Data[2].Title != "Quantum Physics 101" {
+		t.Errorf("expected Summary title 'Quantum Physics 101', got %s", res.Data[2].Title)
 	}
 
 	// Verify Counts
