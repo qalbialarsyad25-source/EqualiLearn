@@ -49,3 +49,34 @@ func (m *Middleware) Authentication(c *gin.Context) {
 	c.Set("role", role)
 	c.Next()
 }
+
+func (m *Middleware) OptionalAuthentication(c *gin.Context) {
+	header := c.GetHeader("Authorization")
+	if header == "" {
+		c.Next()
+		return
+	}
+
+	parts := strings.Split(header, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		c.Next()
+		return
+	}
+
+	token := parts[1]
+	userIdStr, role, err := m.jwt.ValidateToken(token)
+	if err != nil {
+		c.Next()
+		return
+	}
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.Next()
+		return
+	}
+
+	c.Set("userId", userId)
+	c.Set("role", role)
+	c.Next()
+}

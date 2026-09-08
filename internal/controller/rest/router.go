@@ -42,8 +42,8 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 			speech.DELETE("/history/:id", v1.Authentication, v1.DeleteTranscription)
 
 			// Text-to-Speech (TTS)
-			speech.POST("/synthesize", v1.SynthesizeSpeech)
-			speech.POST("/text-to-speech", v1.SynthesizeSpeech)
+			speech.POST("/synthesize", v1.OptionalAuthentication, v1.SynthesizeSpeech)
+			speech.POST("/text-to-speech", v1.OptionalAuthentication, v1.SynthesizeSpeech)
 			speech.GET("/voices", v1.GetTTSVoices)
 			speech.GET("/tts/history", v1.Authentication, v1.GetTTSHistory)
 			speech.DELETE("/tts/history/:id", v1.Authentication, v1.DeleteTTSHistory)
@@ -52,8 +52,8 @@ func NewRouter(app *gin.Engine, v1 *V1, speechWSHandler *delivery.SpeechWSHandle
 		// AI Document & Presentation Summarization REST endpoints (Gemini)
 		documents := api.Group("/documents")
 		{
-			documents.POST("/summarize", v1.SummarizeDocument)
-			documents.POST("/summarize-text", v1.SummarizeText)
+			documents.POST("/summarize", v1.OptionalAuthentication, v1.SummarizeDocument)
+			documents.POST("/summarize-text", v1.OptionalAuthentication, v1.SummarizeText)
 			documents.GET("/history", v1.Authentication, v1.GetDocumentSummaries)
 			documents.GET("/:id", v1.GetDocumentSummaryByID)
 			documents.PUT("/:id", v1.Authentication, v1.UpdateDocumentSummary)
