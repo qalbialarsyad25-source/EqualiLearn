@@ -134,7 +134,7 @@ func (u *AuthService) GoogleCallback(ctx context.Context, code string) (string, 
 		return "", nil
 	}
 
-	if err == nil {
+	if user == nil {
 		user = &entity.User{
 			ID:       uuid.New(),
 			Name:     googleUser.Name,
